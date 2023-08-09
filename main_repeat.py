@@ -115,6 +115,7 @@ if __name__ == '__main__':
     
     # ce_criterion = torch.nn.CrossEntropyLoss()
     # https://github.com/NVIDIA/pix2pixHD/issues/9 how could an old bug appear again...
+    # ce lossでやろうとしたけど失敗したのかな
     bce_criterion = torch.nn.BCEWithLogitsLoss() # torch.nn.BCELoss()
     adam_optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98))
     
@@ -134,6 +135,7 @@ if __name__ == '__main__':
         for step in tqdm(range(num_batch)): # tqdm(range(num_batch), total=num_batch, ncols=70, leave=False, unit='b'):
             u, seq, repeat, pos, neg = sampler.next_batch() # tuples to ndarray
             u, seq, repeat, pos, neg = np.array(u), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
+            u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
                 pos_logits, neg_logits = model(u, seq, pos, neg)
             elif args.model == 'SASRec_RepeatEmb':

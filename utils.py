@@ -77,6 +77,33 @@ class WarpSampler(object):
 
 # 
 
+def expand_samples(u, seq, rep, pos, neg, max_seq):
+    num_users, seq_len = seq.shape
+    
+    # 出力用の空のリスト
+    expanded_u = []
+    expanded_seq = []
+    expanded_rep = []
+    expanded_pos = []
+    expanded_neg = []
+
+    for i in range(num_users):
+        for j in range(1, seq_len + 1):
+            expanded_u.append(u[i])
+            # 0でパディング
+            padded_seq = np.pad(seq[i, :j], (max_seq - j, 0), 'constant')
+            panded_rep = np.pad(rep[i, :j], (max_seq - j, 0), 'constant')
+            padded_pos = np.pad(pos[i, :j], (max_seq - j, 0), 'constant')
+            padded_neg = np.pad(neg[i, :j], (max_seq - j, 0), 'constant')
+
+            expanded_seq.append(padded_seq)
+            expanded_rep.append(panded_rep)
+            expanded_pos.append(padded_pos)
+            expanded_neg.append(padded_neg)
+    # 最後にndarrayに変換
+    return np.array(expanded_u), np.array(expanded_seq), np.array(expanded_rep), np.array(expanded_pos), np.array(expanded_neg)
+
+
 # train/val/test data generation
 def data_partition(fname, split='ratio'):
     usernum = 0

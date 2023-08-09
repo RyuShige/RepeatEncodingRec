@@ -93,7 +93,7 @@ class SASRec(torch.nn.Module):
 
         return log_feats
 
-    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs): # for training        
+    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs): # for training
         log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
         pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
