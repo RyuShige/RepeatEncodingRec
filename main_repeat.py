@@ -124,6 +124,9 @@ if __name__ == '__main__':
     early_stop = -1
     early_count = 0
     best_epoch = 0
+    loss = 0
+    total_loss = 0
+    epoch_loss = 0
     
     for epoch in range(epoch_start_idx, args.num_epochs + 1):
         if args.inference_only: break # just to decrease identition
@@ -144,7 +147,11 @@ if __name__ == '__main__':
             for param in model.item_emb.parameters(): loss += args.l2_emb * torch.norm(param)
             loss.backward()
             adam_optimizer.step()
-            wandb.log({"epoch": epoch, "loss": loss.item()})
+            total_loss += loss.item()
+        
+        epoch_loss = loss / num_batch
+        wandb.log({"epoch": epoch, "loss": epoch_loss})
+        total_loss = 0 # for next epoch
 
     
         if epoch % 1 == 0:
