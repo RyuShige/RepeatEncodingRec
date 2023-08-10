@@ -128,6 +128,7 @@ if __name__ == '__main__':
     loss = 0
     total_loss = 0
     epoch_loss = 0
+    best_model_params = None
     
     for epoch in range(epoch_start_idx, args.num_epochs + 1):
         if args.inference_only: break # just to decrease identition
@@ -198,7 +199,7 @@ if __name__ == '__main__':
             best_model_path = os.path.join(folder, fname)
 
             # モデルの重みをロードします。
-            model.load_state_dict(torch.load(best_model_path))
+            model.load_state_dict(torch.load(best_model_path, map_location=torch.device(args.device)))
 
             # ロードした重みを用いてテストの評価を行います。
             t_test = evaluate(model, args.model, dataset, args, mode='test')
@@ -226,7 +227,7 @@ if __name__ == '__main__':
             best_model_path = os.path.join(folder, fname)
 
             # モデルの重みをロードします。
-            model.load_state_dict(torch.load(best_model_path))
+            model.load_state_dict(torch.load(best_model_path, map_location=torch.device(args.device)))
 
             # ロードした重みを用いてテストの評価を行います。
             t_test = evaluate(model, args.model, dataset, args, mode='test')
