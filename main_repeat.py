@@ -128,6 +128,7 @@ if __name__ == '__main__':
     loss = 0
     total_loss = 0
     epoch_loss = 0
+    best_model_params = None
     
     for epoch in range(epoch_start_idx, args.num_epochs + 1):
         if args.inference_only: break # just to decrease identition
@@ -185,16 +186,20 @@ if __name__ == '__main__':
         if early_count == 10:
             print('early stop at epoch {}'.format(epoch))
             print('testing')
-            folder = args.model + '_' + args.dataset + '_' + args.train_dir
-            fname = 'BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-            fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            folder = args.dataset + '_' + args.train_dir
+            if args.model == 'SASRec':
+                fname = 'SASRec_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'SASRec_RepeatEmb':
+                fname = 'SASRec_RepeatEmb_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
             best_model_path = os.path.join(folder, fname)
 
             # モデルの重みをロードします。
-            model.load_state_dict(torch.load(best_model_path))
+            model.load_state_dict(torch.load(best_model_path, map_location=torch.device(args.device)))
 
             # ロードした重みを用いてテストの評価を行います。
             t_test = evaluate(model, args.model, dataset, args, mode='test')
@@ -210,15 +215,19 @@ if __name__ == '__main__':
         if epoch == args.num_epochs:
             print('testing')
             folder = args.dataset + '_' + args.train_dir
-            fname = 'SASRec.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-            fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            if args.model == 'SASRec':
+                fname = 'SASRec.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'SASRec_RepeatEmb':
+                fname = 'SASRec_RepeatEmb.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(model.state_dict(), os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
             best_model_path = os.path.join(folder, fname)
 
             # モデルの重みをロードします。
-            model.load_state_dict(torch.load(best_model_path))
+            model.load_state_dict(torch.load(best_model_path, map_location=torch.device(args.device)))
 
             # ロードした重みを用いてテストの評価を行います。
             t_test = evaluate(model, args.model, dataset, args, mode='test')
