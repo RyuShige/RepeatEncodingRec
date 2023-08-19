@@ -194,7 +194,7 @@ def evaluate(model, model_name, dataset, args, mode):
         rep = np.zeros([args.maxlen], dtype=np.int32)
         idx = args.maxlen - 1
         if mode == 'test':
-            for i, r in zip(user_valid[u], repeat_valid[u]):
+            for i, r in zip(reversed(user_valid[u]), reversed(repeat_valid[u])):
                 seq[idx] = i
                 rep[idx] = r
                 idx -= 1
