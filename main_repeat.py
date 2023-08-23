@@ -157,7 +157,7 @@ if __name__ == '__main__':
         total_loss = 0 # for next epoch
 
     
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             model.eval()
             t1 = time.time() - t0
             T += t1
@@ -183,7 +183,7 @@ if __name__ == '__main__':
 
             wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
         
-        if early_count == 10:
+        if early_count == 3:
             print('early stop at epoch {}'.format(epoch))
             print('testing')
             folder = args.dataset + '_' + args.train_dir
