@@ -136,7 +136,7 @@ if __name__ == '__main__':
         for step in tqdm(range(num_batch)): # tqdm(range(num_batch), total=num_batch, ncols=70, leave=False, unit='b'):
             u, seq, repeat, pos, neg = sampler.next_batch() # tuples to ndarray
             u, seq, repeat, pos, neg = np.array(u), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
-            u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
+            # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
                 pos_logits, neg_logits = model(u, seq, pos, neg)
             elif args.model == 'SASRec_RepeatEmb':
