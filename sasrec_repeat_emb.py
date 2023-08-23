@@ -74,6 +74,7 @@ class SASRec_RepeatEmb(torch.nn.Module):
         positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
         
         repeat = self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev))
+        # repeat *= self.repeat_emb.embedding_dim ** 0.5 # repeatもスケーリング
         input_concat = torch.cat((seqs, repeat), -1)
         seqs = self.concat_layer(input_concat)
         
