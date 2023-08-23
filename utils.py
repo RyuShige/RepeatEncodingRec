@@ -105,68 +105,67 @@ def expand_samples(u, seq, rep, pos, neg, max_seq):
 
 
 # train/val/test data generation
-def data_partition(fname, split='ratio'):
+def data_partition(fname):
     usernum = 0
     itemnum = 0
     repeatnum = 0
-    User = defaultdict(list)
-    Repeat = defaultdict(list)
+    sessionnum = 0
+    sessionsetnum = 0
+    Session_set_train = defaultdict(list)
+    Session_set_valid = defaultdict(list)
+    Session_set_test = defaultdict(list)
+    Session_train = defaultdict(list)
+    Session_valid = defaultdict(list)
+    Session_test = defaultdict(list)
+    Repeat_train = defaultdict(list)
+    Repeat_valid = defaultdict(list)
+    Repeat_test = defaultdict(list)
     user_train = {}
     user_valid = {}
     user_test = {}
     repeat_train = {}
     repeat_valid = {}
     repeat_test = {}
+    session_set_train = {}
+    session_set_valid = {}
+    session_set_test = {}
+    session_train = {}
+    session_valid = {}
+    session_test = {}
     # assume user/item index starting from 1
-    f = open('data/%s.txt' % fname, 'r')
+    # データセット全体
+    f = open('data/%s.txt' % fname, 'r') # ここが事前にt,v,tをまとめたもの
     for line in f:
-        u, i, t, r = line.rstrip().split(' ')
+        u, i, t, r, s, ss = line.rstrip().split(' ')
         u = int(u)
         i = int(i)
         t = float(t)
         r = int(r)
+        s = int(s)
+        ss = int(ss)
         usernum = max(u, usernum)
         itemnum = max(i, itemnum)
         repeatnum = max(r, repeatnum)
-        User[u].append(i)
-        Repeat[u].append(r)
+        sessionnum = max(s, sessionnum)
+        sessionsetnum = max(ss, sessionsetnum)
+    # train/valid/test
+    f = open('data/%s_train.txt' % fname, 'r')
+    for line in f:
+        Session_set_train[ss].append(i)
+        Session_train[ss].append(s)
+        Repeat_train[ss].append(r)
+    f = open('data/%s_valid.txt' % fname, 'r')
+    for line in f:
+        Session_set_valid[ss].append(i)
+        Session_valid[ss].append(s)
+        Repeat_valid[ss].append(r)
+    f = open('data/%s_test.txt' % fname, 'r')
+    for line in f:
+        Session_set_test[ss].append(i)
+        Session_test[ss].append(s)
+        Repeat_test[ss].append(r)
 
-    if split == 'ratio':
-        for user in User:
-            nfeedback = len(User[user])
-            if nfeedback < 3:
-                user_train[user] = User[user]
-                user_valid[user] = []
-                user_test[user] = []
-                repeat_train[user] = Repeat[user]
-                repeat_valid[user] = []
-                repeat_test[user] = []
-            else:
-                # 8:1:1で分割
-                train_len = int(nfeedback * 0.8)
-                valid_len = int(nfeedback * 0.1)
-                test_len = nfeedback - train_len - valid_len
-                user_train[user] = User[user][:train_len]
-                user_valid[user] = User[user][train_len:train_len + valid_len]
-                user_test[user] = User[user][train_len + valid_len:]
-                repeat_train[user] = Repeat[user][:train_len]
-                repeat_valid[user] = Repeat[user][train_len:train_len + valid_len]
-                repeat_test[user] = Repeat[user][train_len + valid_len:]
-
-    elif split == 'LOO':
-        for user in User:
-            nfeedback = len(User[user])
-            if nfeedback < 3:
-                user_train[user] = User[user]
-                user_valid[user] = []
-                user_test[user] = []
-            else:
-                user_train[user] = User[user][:-2]
-                user_valid[user] = []
-                user_valid[user].append(User[user][-2])
-                user_test[user] = []
-                user_test[user].append(User[user][-1])
-    return [user_train, user_valid, user_test, repeat_train, repeat_valid, repeat_test, usernum, repeatnum, itemnum]
+    return [Session_set_train, Session_set_valid, Session_set_test, Session_train, Session_valid, Session_test, Repeat_train, Repeat_valid, Repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum]
 
 # evaluate
 def evaluate(model, model_name, dataset, args, mode):
