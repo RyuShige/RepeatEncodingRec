@@ -171,7 +171,7 @@ def data_partition(fname):
 # evaluate
 def evaluate(model, model_name, dataset, args, mode):
     assert mode in {'valid', 'test'}, "mode must be either 'valid' or 'test'"
-    [user_train, user_valid, user_test, repeat_train, repeat_valid, repeat_test, usernum, repeatnum, itemnum] = copy.deepcopy(dataset)
+    [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum] = copy.deepcopy(dataset)
     RECALL_10 = 0.0
     RECALL_20 = 0.0
     MRR_10 = 0.0
@@ -182,33 +182,43 @@ def evaluate(model, model_name, dataset, args, mode):
     HT_20 = 0.0
     valid_user = 0.0
 
-    if usernum > 10000:
-        users = random.sample(range(1, usernum + 1), 10000)
+    if sessionsetnum > 10000:
+        session_sets = random.sample(range(1, sessionsetnum + 1), 10000)
     else:
-        users = range(1, usernum + 1)
-    for u in tqdm(users):
+        session_sets = range(1, sessionsetnum + 1)
+    for ss in tqdm(session_sets):
 
-        if len(user_train[u]) < 1 or len(user_valid[u]) < 1 or len(user_test[u]) < 1: continue
+        if len(session_set_train[ss]) < 1 or len(session_set_valid[ss]) < 1 or len(session_set_test[ss]) < 1: continue
 
         seq = np.zeros([args.maxlen], dtype=np.int32)
+        s = np.zeros([args.maxlen], dtype=np.int32)
         rep = np.zeros([args.maxlen], dtype=np.int32)
+
+        # seqとitem_idxを作成
         idx = args.maxlen - 1
-        if mode == 'test':
-            for i, r in zip(reversed(user_valid[u]), reversed(repeat_valid[u])):
+        if mode == 'valid':
+            s = session_valid[ss] # session set中のsession idを読み込む
+            # 最も大きいsession idをもつindexを取得
+            max_s = np.argmax(s) # このindexまでがseq(session setの最後のセッションの最初の曲)
+            input_seq = session_set_valid[ss][:max_s+1] # seqにはsession setの最後のセッションの最初の曲までを入れる
+            input_rep = repeat_valid[ss][:max_s+1]
+            for i, r in zip(reversed(input_seq), reversed(input_rep)):
                 seq[idx] = i
                 rep[idx] = r
                 idx -= 1
                 if idx == 0: break
-        for i, r in zip(reversed(user_train[u]), reversed(repeat_train[u])):
-            if idx == 0: break
-            seq[idx] = i
-            rep[idx] = r
-            idx -= 1
-            if idx == -1: break
-        if mode == 'valid':
-            item_idx = user_valid[u]
+            item_idx = session_set_valid[ss][max_s+1:]
         elif mode == 'test':
-            item_idx = user_test[u]
+            s = session_test[ss]
+            max_s = np.argmax(s)
+            input_seq = session_set_test[ss][:max_s+1]
+            input_rep = repeat_test[ss][:max_s+1]
+            for i, r in zip(reversed(input_seq), reversed(input_rep)):
+                seq[idx] = i
+                rep[idx] = r
+                idx -= 1
+                if idx == 0: break
+            item_idx = session_set_test[ss][max_s+1:]
         
         correct_len = len(item_idx)
 
@@ -224,9 +234,9 @@ def evaluate(model, model_name, dataset, args, mode):
         item_idx.extend(t)
 
         if model_name == 'SASRec':
-            predictions = -model.predict(*[np.array(l) for l in [[u], [seq], item_idx]])
+            predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]])
         elif model_name == 'SASRec_RepeatEmb':
-            predictions = -model.predict(*[np.array(l) for l in [[u], [seq], [rep], item_idx]])
+            predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
         predictions = predictions[0]  # - for 1st argsort DESC
 
         ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得

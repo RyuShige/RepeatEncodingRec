@@ -81,9 +81,9 @@ if __name__ == '__main__':
     
     sampler = WarpSampler(session_set_train, session_train, repeat_train, sessionsetnum, itemnum, batch_size=args.batch_size, maxlen=args.maxlen, n_workers=3)
     if args.model == 'SASRec':
-        model = SASRec(usernum, itemnum, args).to(args.device)
+        model = SASRec(sessionsetnum, itemnum, args).to(args.device)
     elif args.model == 'SASRec_RepeatEmb':
-        model = SASRec_RepeatEmb(usernum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
+        model = SASRec_RepeatEmb(sessionsetnum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
     
     for name, param in model.named_parameters():
         try:
@@ -97,22 +97,22 @@ if __name__ == '__main__':
     model.train() # enable model training
     
     epoch_start_idx = 1
-    if args.state_dict_path is not None:
-        try:
-            model.load_state_dict(torch.load(args.state_dict_path, map_location=torch.device(args.device)))
-            tail = args.state_dict_path[args.state_dict_path.find('epoch=') + 6:]
-            epoch_start_idx = int(tail[:tail.find('.')]) + 1
-        except: # in case your pytorch version is not 1.6 etc., pls debug by pdb if load weights failed
-            print('failed loading state_dicts, pls check file path: ', end="")
-            print(args.state_dict_path)
-            print('pdb enabled for your quick check, pls type exit() if you do not need it')
-            import pdb; pdb.set_trace()
+    # if args.state_dict_path is not None:
+    #     try:
+    #         model.load_state_dict(torch.load(args.state_dict_path, map_location=torch.device(args.device)))
+    #         tail = args.state_dict_path[args.state_dict_path.find('epoch=') + 6:]
+    #         epoch_start_idx = int(tail[:tail.find('.')]) + 1
+    #     except: # in case your pytorch version is not 1.6 etc., pls debug by pdb if load weights failed
+    #         print('failed loading state_dicts, pls check file path: ', end="")
+    #         print(args.state_dict_path)
+    #         print('pdb enabled for your quick check, pls type exit() if you do not need it')
+    #         import pdb; pdb.set_trace()
             
     
-    if args.inference_only:
-        model.eval()
-        t_test = evaluate(model, args.model, dataset, args, mode='test')
-        print('test (Rcall@10: %.4f, MRR@10 %.4f, HR@10: %.4f)' % (t_test[0], t_test[1], t_test[2]))
+    # if args.inference_only:
+    #     model.eval()
+    #     t_test = evaluate(model, args.model, dataset, args, mode='test')
+    #     print('test (Rcall@10: %.4f, MRR@10 %.4f, HR@10: %.4f)' % (t_test[0], t_test[1], t_test[2]))
     
     # ce_criterion = torch.nn.CrossEntropyLoss()
     # https://github.com/NVIDIA/pix2pixHD/issues/9 how could an old bug appear again...
@@ -135,13 +135,13 @@ if __name__ == '__main__':
         if args.inference_only: break # just to decrease identition
         print('epoch: ', epoch)
         for step in tqdm(range(num_batch)): # tqdm(range(num_batch), total=num_batch, ncols=70, leave=False, unit='b'):
-            u, seq, repeat, pos, neg = sampler.next_batch() # tuples to ndarray
-            u, seq, repeat, pos, neg = np.array(u), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
+            ss, seq, repeat, pos, neg = sampler.next_batch() # tuples to ndarray
+            ss, seq, repeat, pos, neg = np.array(ss), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
-                pos_logits, neg_logits = model(u, seq, pos, neg)
+                pos_logits, neg_logits = model(ss, seq, pos, neg)
             elif args.model == 'SASRec_RepeatEmb':
-                pos_logits, neg_logits = model(u, seq, repeat, pos, neg)
+                pos_logits, neg_logits = model(ss, seq, repeat, pos, neg)
             pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()
