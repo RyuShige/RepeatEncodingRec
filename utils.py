@@ -15,21 +15,21 @@ def random_neq(l, r, s):
     return t
 
 
-def sample_function(user_train, repeat_train, usernum, itemnum, batch_size, maxlen, result_queue, SEED):
+def sample_function(session_set_train, session_train, repeat_train, sessionsetnum, itemnum, batch_size, maxlen, result_queue, SEED):
     def sample():
 
-        user = np.random.randint(1, usernum + 1)
-        while len(user_train[user]) <= 1: user = np.random.randint(1, usernum + 1)
+        sessionset = np.random.randint(1, sessionsetnum + 1)
+        while len(session_set_train[sessionset]) <= 1: sessionset = np.random.randint(1, sessionsetnum + 1)
 
         seq = np.zeros([maxlen], dtype=np.int32)
         rep = np.zeros([maxlen], dtype=np.int32)
         pos = np.zeros([maxlen], dtype=np.int32)
         neg = np.zeros([maxlen], dtype=np.int32)
-        nxt = user_train[user][-1]
+        nxt = session_set_train[sessionset][-1]
         idx = maxlen - 1
 
-        ts = set(user_train[user])
-        for i, r in zip(reversed(user_train[user][:-1]), reversed(repeat_train[user][:-1])): # ここらへんだけどseparateを先に変えたほうがいいかも
+        ts = set(session_set_train[sessionset])
+        for i, r in zip(reversed(session_set_train[sessionset][:-1]), reversed(repeat_train[sessionset][:-1])):
             seq[idx] = i
             rep[idx] = r
             pos[idx] = nxt
@@ -38,7 +38,7 @@ def sample_function(user_train, repeat_train, usernum, itemnum, batch_size, maxl
             idx -= 1
             if idx == -1: break
 
-        return (user, seq, rep, pos, neg)
+        return (sessionset, seq, rep, pos, neg)
 
     np.random.seed(SEED)
     while True:
@@ -50,14 +50,15 @@ def sample_function(user_train, repeat_train, usernum, itemnum, batch_size, maxl
 
 
 class WarpSampler(object):
-    def __init__(self, User, Repeat, usernum, itemnum, batch_size=64, maxlen=10, n_workers=1):
+    def __init__(self, SessionSet, Session, Repeat, sessionsetnum, itemnum, batch_size=64, maxlen=10, n_workers=1):
         self.result_queue = Queue(maxsize=n_workers * 10)
         self.processors = []
         for i in range(n_workers):
             self.processors.append(
-                Process(target=sample_function, args=(User,
+                Process(target=sample_function, args=(SessionSet,
+                                                      Session,
                                                       Repeat,
-                                                      usernum,
+                                                      sessionsetnum,
                                                       itemnum,
                                                       batch_size,
                                                       maxlen,

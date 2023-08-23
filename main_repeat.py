@@ -66,19 +66,20 @@ if __name__ == '__main__':
     # global dataset
     dataset = data_partition(args.dataset, args.split)
 
-    [user_train, user_valid, user_test, repeat_train, repeat_valid, repreat_test, usernum, repeatnum, itemnum] = dataset
-    num_batch = len(user_train) // args.batch_size # tail? + ((len(user_train) % args.batch_size) != 0)
+    [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum] = dataset
+    num_batch = len(session_set_train) // args.batch_size # tail? + ((len(user_train) % args.batch_size) != 0)
     cc = 0.0
-    for u in user_train:
-        cc += len(user_train[u])
-    print(f'user num {usernum}')
+    for ss in session_set_train:
+        cc += len(session_set_train[ss])
+    print(f'session set num {sessionsetnum}')
+    print(f'session num {sessionnum}')
     print(f'item num {itemnum}')
     print(f'max repeat {repeatnum}')
-    print('average sequence length: %.2f' % (cc / len(user_train)))
+    print('average sequence length: %.2f' % (cc / sessionsetnum))
     
     f = open(os.path.join(args.dataset + '_' + args.train_dir, 'log.txt'), 'w')
     
-    sampler = WarpSampler(user_train, repeat_train, usernum, itemnum, batch_size=args.batch_size, maxlen=args.maxlen, n_workers=3)
+    sampler = WarpSampler(session_set_train, session_train, repeat_train, sessionsetnum, itemnum, batch_size=args.batch_size, maxlen=args.maxlen, n_workers=3)
     if args.model == 'SASRec':
         model = SASRec(usernum, itemnum, args).to(args.device)
     elif args.model == 'SASRec_RepeatEmb':
