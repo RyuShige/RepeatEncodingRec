@@ -164,7 +164,6 @@ if __name__ == '__main__':
             T += t1
             print('Evaluating')
             t_valid = evaluate(model, args.model, dataset, args, mode='valid')
-            t_test = evaluate(model, args.model, dataset, args, mode='test')
             
             # early stopping
             if early_stop < t_valid[3]:
