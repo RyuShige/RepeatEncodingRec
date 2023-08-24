@@ -112,6 +112,8 @@ def data_partition(fname):
     repeatnum = 0
     sessionnum = 0
     sessionsetnum = 0
+    sessionset_valid_min = np.inf
+    sessionset_test_min = np.inf
     Session_set_train = defaultdict(list)
     Session_set_valid = defaultdict(list)
     Session_set_test = defaultdict(list)
@@ -121,18 +123,6 @@ def data_partition(fname):
     Repeat_train = defaultdict(list)
     Repeat_valid = defaultdict(list)
     Repeat_test = defaultdict(list)
-    user_train = {}
-    user_valid = {}
-    user_test = {}
-    repeat_train = {}
-    repeat_valid = {}
-    repeat_test = {}
-    session_set_train = {}
-    session_set_valid = {}
-    session_set_test = {}
-    session_train = {}
-    session_valid = {}
-    session_test = {}
     # assume user/item index starting from 1
     # データセット全体
     f = open('data/%s.txt' % fname, 'r') # ここが事前にt,v,tをまとめたもの
@@ -152,26 +142,49 @@ def data_partition(fname):
     # train/valid/test
     f = open('data/%s_train.txt' % fname, 'r')
     for line in f:
+        u, i, t, r, s, ss = line.rstrip().split(' ')
+        u = int(u)
+        i = int(i)
+        t = float(t)
+        r = int(r)
+        s = int(s)
+        ss = int(ss)
         Session_set_train[ss].append(i)
         Session_train[ss].append(s)
         Repeat_train[ss].append(r)
     f = open('data/%s_valid.txt' % fname, 'r')
     for line in f:
+        u, i, t, r, s, ss = line.rstrip().split(' ')
+        u = int(u)
+        i = int(i)
+        t = float(t)
+        r = int(r)
+        s = int(s)
+        ss = int(ss)
         Session_set_valid[ss].append(i)
         Session_valid[ss].append(s)
         Repeat_valid[ss].append(r)
+        sessionset_valid_min = min(ss, sessionset_valid_min)
     f = open('data/%s_test.txt' % fname, 'r')
     for line in f:
+        u, i, t, r, s, ss = line.rstrip().split(' ')
+        u = int(u)
+        i = int(i)
+        t = float(t)
+        r = int(r)
+        s = int(s)
+        ss = int(ss)
         Session_set_test[ss].append(i)
         Session_test[ss].append(s)
         Repeat_test[ss].append(r)
+        sessionset_test_min = min(ss, sessionset_test_min)
 
-    return [Session_set_train, Session_set_valid, Session_set_test, Session_train, Session_valid, Session_test, Repeat_train, Repeat_valid, Repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum]
+    return [Session_set_train, Session_set_valid, Session_set_test, Session_train, Session_valid, Session_test, Repeat_train, Repeat_valid, Repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min]
 
 # evaluate
 def evaluate(model, model_name, dataset, args, mode):
     assert mode in {'valid', 'test'}, "mode must be either 'valid' or 'test'"
-    [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum] = copy.deepcopy(dataset)
+    [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = copy.deepcopy(dataset)
     RECALL_10 = 0.0
     RECALL_20 = 0.0
     MRR_10 = 0.0
@@ -182,13 +195,10 @@ def evaluate(model, model_name, dataset, args, mode):
     HT_20 = 0.0
     valid_user = 0.0
 
-    if sessionsetnum > 10000:
-        session_sets = random.sample(range(1, sessionsetnum + 1), 10000)
-    else:
-        session_sets = range(1, sessionsetnum + 1)
+    session_sets = list(session_set_valid.keys()) if mode == 'valid' else list(session_set_test.keys())
     for ss in tqdm(session_sets):
-
-        if len(session_set_train[ss]) < 1 or len(session_set_valid[ss]) < 1 or len(session_set_test[ss]) < 1: continue
+        # print('session_set_test[ss]', session_set_test[ss])
+        if (mode == 'valid' and len(session_set_valid[ss]) < 1) or (mode == 'test' and len(session_set_test[ss]) < 1): continue
 
         seq = np.zeros([args.maxlen], dtype=np.int32)
         s = np.zeros([args.maxlen], dtype=np.int32)

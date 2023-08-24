@@ -40,33 +40,33 @@ with open(os.path.join(args.dataset + '_' + args.train_dir, 'args.txt'), 'w') as
     f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 f.close()
 
-wandb.init(
-    project=f"{args.project}",
-    name=f"{args.model}", 
-    config={
-        'dataset': args.dataset,
-        'model': args.model,
-        'batch_size': args.batch_size,
-        'lr': args.lr,
-        'maxlen': args.maxlen,
-        'hidden_units': args.hidden_units,
-        'num_blocks': args.num_blocks,
-        'num_epochs': args.num_epochs,
-        'num_heads': args.num_heads,
-        'dropout_rate': args.dropout_rate,
-        'l2_emb': args.l2_emb,
-        'device': args.device,
-        'inference_only': args.inference_only,
-        'state_dict_path': args.state_dict_path,
-        'split': args.split
-    }
-    )
+# wandb.init(
+#     project=f"{args.project}",
+#     name=f"{args.model}", 
+#     config={
+#         'dataset': args.dataset,
+#         'model': args.model,
+#         'batch_size': args.batch_size,
+#         'lr': args.lr,
+#         'maxlen': args.maxlen,
+#         'hidden_units': args.hidden_units,
+#         'num_blocks': args.num_blocks,
+#         'num_epochs': args.num_epochs,
+#         'num_heads': args.num_heads,
+#         'dropout_rate': args.dropout_rate,
+#         'l2_emb': args.l2_emb,
+#         'device': args.device,
+#         'inference_only': args.inference_only,
+#         'state_dict_path': args.state_dict_path,
+#         'split': args.split
+#     }
+#     )
 
 if __name__ == '__main__':
     # global dataset
-    dataset = data_partition(args.dataset, args.split)
+    dataset = data_partition(args.dataset)
 
-    [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum] = dataset
+    [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = dataset
     num_batch = len(session_set_train) // args.batch_size # tail? + ((len(user_train) % args.batch_size) != 0)
     cc = 0.0
     for ss in session_set_train:
@@ -154,7 +154,7 @@ if __name__ == '__main__':
             total_loss += loss.item()
         
         epoch_loss = loss / num_batch
-        wandb.log({"epoch": epoch, "loss": epoch_loss})
+        # wandb.log({"epoch": epoch, "loss": epoch_loss})
         total_loss = 0 # for next epoch
 
     
@@ -164,6 +164,7 @@ if __name__ == '__main__':
             T += t1
             print('Evaluating')
             t_valid = evaluate(model, args.model, dataset, args, mode='valid')
+            t_test = evaluate(model, args.model, dataset, args, mode='test')
             
             # early stopping
             if early_stop < t_valid[3]:
@@ -182,7 +183,7 @@ if __name__ == '__main__':
             t0 = time.time()
             model.train()
 
-            wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
+            # wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
         
         if early_count == 3:
             print('early stop at epoch {}'.format(epoch))
@@ -209,7 +210,7 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
 
-            wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
+            # wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
             
             break
     
@@ -237,9 +238,9 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
 
-            wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
+            # wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
     
     f.close()
     sampler.close()
-    wandb.finish()
+    # wandb.finish()
     print("Done")
