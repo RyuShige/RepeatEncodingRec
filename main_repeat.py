@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', required=True)
 parser.add_argument('--model', required=True)
 parser.add_argument('--project', required=True)
+parser.add_argument('--name', required=True)
 parser.add_argument('--train_dir', required=True)
 parser.add_argument('--batch_size', default=128, type=int)
 parser.add_argument('--lr', default=0.001, type=float)
@@ -42,7 +43,7 @@ f.close()
 
 wandb.init(
     project=f"{args.project}",
-    name=f"{args.model}", 
+    name=f"{args.model}_{args.name}", 
     config={
         'dataset': args.dataset,
         'model': args.model,
