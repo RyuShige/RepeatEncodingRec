@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from model import SASRec
 from sasrec_repeat_emb import SASRec_RepeatEmb
+from sasrec_repeat_emb_plus import SASRec_RepeatEmbPlus
 from utils import *
 
 def str2bool(s):
@@ -85,6 +86,8 @@ if __name__ == '__main__':
         model = SASRec(sessionsetnum, itemnum, args).to(args.device)
     elif args.model == 'SASRec_RepeatEmb':
         model = SASRec_RepeatEmb(sessionsetnum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
+    elif args.model == 'SASRec_RepeatEmbPlus':
+        model = SASRec_RepeatEmbPlus(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     
     for name, param in model.named_parameters():
         try:

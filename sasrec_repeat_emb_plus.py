@@ -23,9 +23,9 @@ class PointWiseFeedForward(torch.nn.Module):
 # in case your pytorch version is below 1.16 or for other reasons
 # https://github.com/pmixer/TiSASRec.pytorch/blob/master/model.py
 
-class SASRec_RepeatEmb(torch.nn.Module):
+class SASRec_RepeatEmbPlus(torch.nn.Module):
     def __init__(self, user_num, item_num, repeat_num, args):
-        super(SASRec_RepeatEmb, self).__init__()
+        super(SASRec_RepeatEmbPlus, self).__init__()
 
         self.user_num = user_num
         self.item_num = item_num
