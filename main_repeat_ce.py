@@ -152,7 +152,7 @@ if __name__ == '__main__':
             indices = np.where(pos != 0)
             loss = ce_criterion(pos_logits[indices], pos_labels[indices])
             # loss += ce_criterion(neg_logits[indices], neg_labels[indices])
-            for param in model.item_emb.parameters(): loss += args.l2_emb * torch.norm(param)
+            # for param in model.item_emb.parameters(): loss += args.l2_emb * torch.norm(param)
             loss.backward()
             adam_optimizer.step()
             total_loss += loss.item()
