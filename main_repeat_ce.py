@@ -150,6 +150,8 @@ if __name__ == '__main__':
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()
             indices = np.where(pos != 0)
+            # indicesをtensorに変換
+            indices = torch.LongTensor(indices[0]).to(args.device)
             loss = ce_criterion(pos_logits[indices], pos[indices]) # 本当はposは1つのアイテムなはず、それを複数のアイテムでロスの計算をしている
             # loss += ce_criterion(neg_logits[indices], neg_labels[indices])
             # for param in model.item_emb.parameters(): loss += args.l2_emb * torch.norm(param)
