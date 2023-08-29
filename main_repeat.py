@@ -144,7 +144,7 @@ if __name__ == '__main__':
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
                 pos_logits, neg_logits = model(ss, seq, pos, neg)
-            elif args.model == 'SASRec_RepeatEmb':
+            elif args.model == 'SASRec_RepeatEmb' or args.model == 'SASRec_RepeatEmbPlus':
                 pos_logits, neg_logits = model(ss, seq, repeat, pos, neg)
             pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
@@ -198,6 +198,9 @@ if __name__ == '__main__':
             elif args.model == 'SASRec_RepeatEmb':
                 fname = 'SASRec_RepeatEmb_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'SASRec_RepeatEmbPlus':
+                fname = 'SASRec_RepeatEmbPlus_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
@@ -225,6 +228,9 @@ if __name__ == '__main__':
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_RepeatEmb':
                 fname = 'SASRec_RepeatEmb.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'SASRec_RepeatEmbPlus':
+                fname = 'SASRec_RepeatEmbPlus.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(model.state_dict(), os.path.join(folder, fname))
 
