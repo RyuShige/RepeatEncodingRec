@@ -110,7 +110,9 @@ class SASRec_RepeatEmb(torch.nn.Module):
 
         pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
         neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
-
+        # print(f'log_feats.shape: {log_feats.shape}')
+        # print(f'pos_embs.shape: {pos_embs.shape}')
+        # print(f'neg_embs.shape: {neg_embs.shape}')
         pos_logits = (log_feats * pos_embs).sum(dim=-1)
         neg_logits = (log_feats * neg_embs).sum(dim=-1)
 
