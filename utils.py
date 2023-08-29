@@ -245,7 +245,7 @@ def evaluate(model, model_name, dataset, args, mode):
 
         if model_name == 'SASRec':
             predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]])
-        elif model_name == 'SASRec_RepeatEmb':
+        elif model_name == 'SASRec_RepeatEmb' or model_name=='SASRec_RepeatEmbPlus':
             predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
         predictions = predictions[0]  # - for 1st argsort DESC
 
