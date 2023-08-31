@@ -19,7 +19,7 @@ def sample_function(session_set_train, session_train, repeat_train, sessionsetnu
     def sample():
 
         sessionset = np.random.randint(1, sessionsetnum + 1)
-        while len(session_set_train[sessionset]) <= 1: sessionset = np.random.randint(1, sessionsetnum + 1)
+        while len(session_set_train[sessionset]) <= 1: sessionset = np.random.randint(1, sessionsetnum + 1) # 学習データに存在しないsessionsetの場合はやり直し
 
         seq = np.zeros([maxlen], dtype=np.int32)
         rep = np.zeros([maxlen], dtype=np.int32)
