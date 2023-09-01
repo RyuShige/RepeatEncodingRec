@@ -34,7 +34,7 @@ class SASRec_RepeatEmb(torch.nn.Module):
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
-        self.item_emb = torch.nn.Embedding(self.item_num+1, args.hidden_units, padding_idx=0)
+        self.item_emb = torch.nn.Embedding(self.item_num+1, args.hidden_units, padding_idx=0) # +1いる？
         self.pos_emb = torch.nn.Embedding(args.maxlen, args.hidden_units) # TO IMPROVE
         self.repeat_emb = torch.nn.Embedding(self.repeat_num+1, args.hidden_units, padding_idx=0) # repeat embedding
         self.emb_dropout = torch.nn.Dropout(p=args.dropout_rate)
@@ -73,7 +73,7 @@ class SASRec_RepeatEmb(torch.nn.Module):
         seqs *= self.item_emb.embedding_dim ** 0.5 # これをrepeat mbeddingにも適用するかどうか、実験してみるしかないか
         positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
         
-        repeat = self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev))
+        repeat = self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev)) # recboleでは.long()を使っている
         # repeat *= self.repeat_emb.embedding_dim ** 0.5 # repeatもスケーリング
         input_concat = torch.cat((seqs, repeat), -1)
         seqs = self.concat_layer(input_concat)
@@ -108,11 +108,9 @@ class SASRec_RepeatEmb(torch.nn.Module):
     def forward(self, user_ids, log_seqs, log_repeat, pos_seqs, neg_seqs): # for training        
         log_feats = self.log2feats(log_seqs, log_repeat) # user_ids hasn't been used yet
 
+        # BCE loss
         pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
         neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
-        # print(f'log_feats.shape: {log_feats.shape}')
-        # print(f'pos_embs.shape: {pos_embs.shape}')
-        # print(f'neg_embs.shape: {neg_embs.shape}')
         pos_logits = (log_feats * pos_embs).sum(dim=-1)
         neg_logits = (log_feats * neg_embs).sum(dim=-1)
 
