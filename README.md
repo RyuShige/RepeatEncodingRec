@@ -32,3 +32,7 @@ pls check paper author's [repo](https://github.com/kang205/SASRec) for detailed 
 ```
 python main_repeat.py --dataset=lfm2b --project=repeat_noscaled --model=SASRec --train_dir=default --maxlen=50 --device=cuda --num_epochs=100 --split=ratio & python main_repeat.py --dataset=lfm2b --project=repeat_noscaled --model=SASRec_RepeatEmb --train_dir=default --maxlen=50 --device=cuda --num_epochs=100 --split=ratio
 ```
+
+### recbole
+性能向上のため、一部のコードはrecboleを参考にした。
+https://github.com/RUCAIBox/RecBole.git
