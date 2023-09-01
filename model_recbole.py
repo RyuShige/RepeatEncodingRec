@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-
+from layer import TransformerEncoder
 
 class PointWiseFeedForward(torch.nn.Module):
     def __init__(self, hidden_units, dropout_rate):
@@ -30,92 +30,114 @@ class SASRec(torch.nn.Module):
         self.user_num = user_num
         self.item_num = item_num
         self.dev = args.device
+        self.maxlen = args.maxlen
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
         self.item_emb = torch.nn.Embedding(self.item_num+1, args.hidden_units, padding_idx=0) # +1いる？
-        self.pos_emb = torch.nn.Embedding(args.maxlen, args.hidden_units) # TO IMPROVE
+        self.pos_emb = torch.nn.Embedding(self.maxlen, args.hidden_units) # TO IMPROVE
+
+        self.inner_size = 256
+        self.attn_dropout_prob = 0.5
+        self.hidden_dropout_prob = 0.5
+        self.hidden_act = "gelu"
+        self.layer_norm_eps = 1e-12
+        self.initializer_range = 0.02
+        
+        self.trm_encoder = TransformerEncoder(
+            n_layers=args.num_blocks,
+            n_heads=args.num_heads,
+            hidden_size=args.hidden_units,
+            inner_size=self.inner_size,
+            hidden_dropout_prob=self.hidden_dropout_prob,
+            attn_dropout_prob=self.attn_dropout_prob,
+            hidden_act=self.hidden_act,
+            layer_norm_eps=self.layer_norm_eps,
+        )
+
+        self.layernorm = torch.nn.LayerNorm(args.hidden_units, eps=self.layer_norm_eps)
         self.emb_dropout = torch.nn.Dropout(p=args.dropout_rate)
+        
+        # parameters initialization
+        self.apply(self._init_weights)
 
-        self.attention_layernorms = torch.nn.ModuleList() # to be Q for self-attention
-        self.attention_layers = torch.nn.ModuleList()
-        self.forward_layernorms = torch.nn.ModuleList()
-        self.forward_layers = torch.nn.ModuleList()
+    def _init_weights(self, module):
+        """Initialize the weights"""
+        if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
+            # Slightly different from the TF version which uses truncated_normal for initialization
+            # cf https://github.com/pytorch/pytorch/pull/5617
+            module.weight.data.normal_(mean=0.0, std=self.initializer_range)
+        elif isinstance(module, torch.nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        if isinstance(module, torch.nn.Linear) and module.bias is not None:
+            module.bias.data.zero_()
+    
+    def gather_indexes(self, output, gather_index):
+        """Gathers the vectors at the specific positions over a minibatch"""
+        gather_index = gather_index.view(-1, 1, 1).expand(-1, -1, output.shape[-1])
+        output_tensor = output.gather(dim=1, index=gather_index)
+        return output_tensor.squeeze(1)
 
-        self.last_layernorm = torch.nn.LayerNorm(args.hidden_units, eps=1e-8)
-
-        for _ in range(args.num_blocks):
-            new_attn_layernorm = torch.nn.LayerNorm(args.hidden_units, eps=1e-8)
-            self.attention_layernorms.append(new_attn_layernorm)
-
-            new_attn_layer =  torch.nn.MultiheadAttention(args.hidden_units,
-                                                            args.num_heads,
-                                                            args.dropout_rate)
-            self.attention_layers.append(new_attn_layer)
-
-            new_fwd_layernorm = torch.nn.LayerNorm(args.hidden_units, eps=1e-8)
-            self.forward_layernorms.append(new_fwd_layernorm)
-
-            new_fwd_layer = PointWiseFeedForward(args.hidden_units, args.dropout_rate)
-            self.forward_layers.append(new_fwd_layer)
-
-            # self.pos_sigmoid = torch.nn.Sigmoid()
-            # self.neg_sigmoid = torch.nn.Sigmoid()
+    def get_attention_mask(self, item_seq, bidirectional=False):
+        """Generate left-to-right uni-directional or bidirectional attention mask for multi-head attention."""
+        attention_mask = item_seq != 0
+        extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)  # torch.bool
+        if not bidirectional:
+            extended_attention_mask = torch.tril(
+                extended_attention_mask.expand((-1, -1, item_seq.size(-1), -1))
+            )
+        extended_attention_mask = torch.where(extended_attention_mask, 0.0, -10000.0)
+        return extended_attention_mask
 
     def log2feats(self, log_seqs):
-        seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
-        seqs *= self.item_emb.embedding_dim ** 0.5
+        # log_seqsの各要素において、0以外の数を数えて、item_seq_lenに格納
+        item_seq_len = np.count_nonzero(log_seqs, axis=1)
+        # tenosrに変換
+        item_seq_len = torch.LongTensor(item_seq_len).to(self.dev)
+
+        log_seqs = torch.LongTensor(log_seqs).to(self.dev)
+        seqs = self.item_emb(log_seqs)
         positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
         seqs += self.pos_emb(torch.LongTensor(positions).to(self.dev))
+        seqs = self.layernorm(seqs)
         seqs = self.emb_dropout(seqs)
 
-        timeline_mask = torch.BoolTensor(log_seqs == 0).to(self.dev)
-        seqs *= ~timeline_mask.unsqueeze(-1) # broadcast in last dim
+        extended_attention_mask = self.get_attention_mask(log_seqs)
 
-        tl = seqs.shape[1] # time dim len for enforce causality
-        attention_mask = ~torch.tril(torch.ones((tl, tl), dtype=torch.bool, device=self.dev))
+        trm_output = self.trm_encoder(
+            seqs, extended_attention_mask, output_all_encoded_layers=True
+        )
 
-        for i in range(len(self.attention_layers)):
-            seqs = torch.transpose(seqs, 0, 1)
-            Q = self.attention_layernorms[i](seqs)
-            mha_outputs, _ = self.attention_layers[i](Q, seqs, seqs, 
-                                            attn_mask=attention_mask)
-                                            # key_padding_mask=timeline_mask
-                                            # need_weights=False) this arg do not work?
-            seqs = Q + mha_outputs
-            seqs = torch.transpose(seqs, 0, 1)
-
-            seqs = self.forward_layernorms[i](seqs)
-            seqs = self.forward_layers[i](seqs)
-            seqs *=  ~timeline_mask.unsqueeze(-1)
-
-        log_feats = self.last_layernorm(seqs) # (U, T, C) -> (U, -1, C)
-
-        return log_feats
+        output = trm_output[-1]
+        output = self.gather_indexes(output, item_seq_len - 1)
+        return output  # [B H]
 
     def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs): # for training
         log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
-        pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
-        neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
+        test_item_emb = self.item_emb.weight
+        logits = torch.matmul(log_feats, test_item_emb.transpose(0, 1))
+        return logits
 
-        pos_logits = (log_feats * pos_embs).sum(dim=-1)
-        neg_logits = (log_feats * neg_embs).sum(dim=-1)
+    # def predict(self, user_ids, log_seqs, item_indices): # for inference
+    #     log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
-        # pos_pred = self.pos_sigmoid(pos_logits)
-        # neg_pred = self.neg_sigmoid(neg_logits)
+    #     final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste
 
-        return pos_logits, neg_logits # pos_pred, neg_pred
+    #     item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # (U, I, C)
+
+    #     logits = item_embs.matmul(final_feat.unsqueeze(-1)).squeeze(-1)
+
+    #     # preds = self.pos_sigmoid(logits) # rank same item list for different users
+
+    #     return logits # preds # (U, I)
 
     def predict(self, user_ids, log_seqs, item_indices): # for inference
+
         log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
-        final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste
+        test_item_emb = self.item_emb(torch.LongTensor(item_indices).to(self.dev))
+        logits = torch.mul(log_feats, test_item_emb).sum(dim=1)
 
-        item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # (U, I, C)
-
-        logits = item_embs.matmul(final_feat.unsqueeze(-1)).squeeze(-1)
-
-        # preds = self.pos_sigmoid(logits) # rank same item list for different users
-
-        return logits # preds # (U, I)
+        return logits

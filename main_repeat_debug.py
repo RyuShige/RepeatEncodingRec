@@ -2,10 +2,10 @@ import os
 import time
 import torch
 import argparse
-# import wandb
+import wandb
 from tqdm import tqdm
 
-from model import SASRec
+from model_recbole import SASRec
 from sasrec_repeat_emb import SASRec_RepeatEmb
 from sasrec_repeat_emb_plus import SASRec_RepeatEmbPlus
 from utils import *
@@ -41,28 +41,6 @@ if not os.path.isdir(args.dataset + '_' + args.train_dir):
 with open(os.path.join(args.dataset + '_' + args.train_dir, 'args.txt'), 'w') as f:
     f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 f.close()
-
-# wandb.init(
-#     project=f"{args.project}",
-#     name=f"{args.model}_{args.name}", 
-#     config={
-#         'dataset': args.dataset,
-#         'model': args.model,
-#         'batch_size': args.batch_size,
-#         'lr': args.lr,
-#         'maxlen': args.maxlen,
-#         'hidden_units': args.hidden_units,
-#         'num_blocks': args.num_blocks,
-#         'num_epochs': args.num_epochs,
-#         'num_heads': args.num_heads,
-#         'dropout_rate': args.dropout_rate,
-#         'l2_emb': args.l2_emb,
-#         'device': args.device,
-#         'inference_only': args.inference_only,
-#         'state_dict_path': args.state_dict_path,
-#         'split': args.split
-#     }
-#     )
 
 if __name__ == '__main__':
     # global dataset
@@ -118,10 +96,10 @@ if __name__ == '__main__':
     #     t_test = evaluate(model, args.model, dataset, args, mode='test')
     #     print('test (Rcall@10: %.4f, MRR@10 %.4f, HR@10: %.4f)' % (t_test[0], t_test[1], t_test[2]))
     
-    # ce_criterion = torch.nn.CrossEntropyLoss()
+    ce_criterion = torch.nn.CrossEntropyLoss()
     # https://github.com/NVIDIA/pix2pixHD/issues/9 how could an old bug appear again...
     # ce lossでやろうとしたけど失敗したのかな
-    bce_criterion = torch.nn.BCEWithLogitsLoss() # torch.nn.BCELoss()
+    # bce_criterion = torch.nn.BCEWithLogitsLoss() # torch.nn.BCELoss()
     adam_optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98))
     
     T = 0.0
@@ -143,34 +121,25 @@ if __name__ == '__main__':
             ss, seq, repeat, pos, neg = np.array(ss), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
-                pos_logits, neg_logits = model(ss, seq, pos, neg)
-            elif args.model == 'SASRec_RepeatEmb' or args.model == 'SASRec_RepeatEmbPlus':
-                pos_logits, neg_logits = model(ss, seq, repeat, pos, neg)
-            pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)
+                logits = model(ss, seq, pos, neg)
+            elif args.model == 'SASRec_RepeatEmb':
+                logits = model(ss, seq, repeat, pos, neg)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()
-            indices = np.where(pos != 0)
-            print(f'indices {indices}')
-            print(f'po_logit shape {pos_logits.shape}')
-            print(f'pos_labels shape {pos_labels.shape}')
-            print(f'po_logit[indices] shape {pos_logits[indices].shape}')
-            print(f'pos_labels[indices] shape {pos_labels[indices].shape}')
-            print(f'pos_logits[indices] {pos_logits[indices]}')
-            print(f'pos_labels[indices] {pos_labels[indices]}')
-            print('-----------------')
-            loss = bce_criterion(pos_logits[indices], pos_labels[indices])
-            loss += bce_criterion(neg_logits[indices], neg_labels[indices])
-            for param in model.item_emb.parameters(): loss += args.l2_emb * torch.norm(param)
+            # posをtensorに変換
+            pos = torch.tensor(pos, dtype=torch.long).to(args.device)
+            loss = ce_criterion(logits, pos)
+            # loss += ce_criterion(neg_logits[indices], neg_labels[indices])
+            # for param in model.item_emb.parameters(): loss += args.l2_emb * torch.norm(param)
             loss.backward()
             adam_optimizer.step()
             total_loss += loss.item()
         
         epoch_loss = loss / num_batch
-        # wandb.log({"epoch": epoch, "loss": epoch_loss})
         total_loss = 0 # for next epoch
 
     
-        if epoch % 10 == 0:
+        if epoch % 1 == 0:
             model.eval()
             t1 = time.time() - t0
             T += t1
@@ -194,7 +163,6 @@ if __name__ == '__main__':
             t0 = time.time()
             model.train()
 
-            # wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
         
         if early_count == 3:
             print('early stop at epoch {}'.format(epoch))
@@ -205,9 +173,6 @@ if __name__ == '__main__':
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_RepeatEmb':
                 fname = 'SASRec_RepeatEmb_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'SASRec_RepeatEmbPlus':
-                fname = 'SASRec_RepeatEmbPlus_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
@@ -224,7 +189,6 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
 
-            # wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
             
             break
     
@@ -236,9 +200,6 @@ if __name__ == '__main__':
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_RepeatEmb':
                 fname = 'SASRec_RepeatEmb.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'SASRec_RepeatEmbPlus':
-                fname = 'SASRec_RepeatEmbPlus.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(model.state_dict(), os.path.join(folder, fname))
 
@@ -255,9 +216,7 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
 
-            # wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
     
     f.close()
     sampler.close()
-    # wandb.finish()
     print("Done")
