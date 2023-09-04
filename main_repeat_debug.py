@@ -2,10 +2,9 @@ import os
 import time
 import torch
 import argparse
-import wandb
 from tqdm import tqdm
 
-from model_recbole import SASRec
+from model import SASRec
 from sasrec_repeat_emb import SASRec_RepeatEmb
 from sasrec_repeat_emb_plus import SASRec_RepeatEmbPlus
 from utils import *
@@ -41,6 +40,7 @@ if not os.path.isdir(args.dataset + '_' + args.train_dir):
 with open(os.path.join(args.dataset + '_' + args.train_dir, 'args.txt'), 'w') as f:
     f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 f.close()
+
 
 if __name__ == '__main__':
     # global dataset
@@ -96,10 +96,10 @@ if __name__ == '__main__':
     #     t_test = evaluate(model, args.model, dataset, args, mode='test')
     #     print('test (Rcall@10: %.4f, MRR@10 %.4f, HR@10: %.4f)' % (t_test[0], t_test[1], t_test[2]))
     
-    ce_criterion = torch.nn.CrossEntropyLoss()
+    # ce_criterion = torch.nn.CrossEntropyLoss()
     # https://github.com/NVIDIA/pix2pixHD/issues/9 how could an old bug appear again...
     # ce lossでやろうとしたけど失敗したのかな
-    # bce_criterion = torch.nn.BCEWithLogitsLoss() # torch.nn.BCELoss()
+    bce_criterion = torch.nn.BCEWithLogitsLoss() # torch.nn.BCELoss()
     adam_optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98))
     
     T = 0.0
@@ -121,16 +121,16 @@ if __name__ == '__main__':
             ss, seq, repeat, pos, neg = np.array(ss), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
-                logits = model(ss, seq, pos, neg)
-            elif args.model == 'SASRec_RepeatEmb':
-                logits = model(ss, seq, repeat, pos, neg)
+                pos_logits, neg_logits = model(ss, seq, pos, neg)
+            elif args.model == 'SASRec_RepeatEmb' or args.model == 'SASRec_RepeatEmbPlus':
+                pos_logits, neg_logits = model(ss, seq, repeat, pos, neg)
+            pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()
-            # posをtensorに変換
-            pos = torch.tensor(pos, dtype=torch.long).to(args.device)
-            loss = ce_criterion(logits, pos)
-            # loss += ce_criterion(neg_logits[indices], neg_labels[indices])
-            # for param in model.item_emb.parameters(): loss += args.l2_emb * torch.norm(param)
+            indices = np.where(pos != 0)
+            loss = bce_criterion(pos_logits[indices], pos_labels[indices])
+            loss += bce_criterion(neg_logits[indices], neg_labels[indices])
+            for param in model.item_emb.parameters(): loss += args.l2_emb * torch.norm(param)
             loss.backward()
             adam_optimizer.step()
             total_loss += loss.item()
@@ -139,7 +139,7 @@ if __name__ == '__main__':
         total_loss = 0 # for next epoch
 
     
-        if epoch % 1 == 0:
+        if epoch % 10 == 0:
             model.eval()
             t1 = time.time() - t0
             T += t1
@@ -174,6 +174,9 @@ if __name__ == '__main__':
             elif args.model == 'SASRec_RepeatEmb':
                 fname = 'SASRec_RepeatEmb_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'SASRec_RepeatEmbPlus':
+                fname = 'SASRec_RepeatEmbPlus_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
@@ -200,6 +203,9 @@ if __name__ == '__main__':
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_RepeatEmb':
                 fname = 'SASRec_RepeatEmb.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'SASRec_RepeatEmbPlus':
+                fname = 'SASRec_RepeatEmbPlus.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(model.state_dict(), os.path.join(folder, fname))
 
