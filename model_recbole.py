@@ -95,7 +95,7 @@ class SASRec(torch.nn.Module):
         # log_seqsにおいて、0以外の数を数えて、item_seq_lenに格納
         # item_seq_len = np.count_nonzero(log_seqs, axis=1)
         # self.batch_size個のnumpy配列を作成
-        item_seq_len = np.full(self.batch_size, self.maxlen)
+        item_seq_len = np.full(log_seqs.shape[0], self.maxlen)
         # tenosrに変換
         item_seq_len = torch.LongTensor(item_seq_len).to(self.dev)
 
@@ -137,7 +137,6 @@ class SASRec(torch.nn.Module):
         # return logits # preds # (U, I)
 
     def predict(self, user_ids, log_seqs, item_indices): # for inference
-
         log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
         test_item_emb = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # 指定したアイテムの学習済みembeddingを取得
