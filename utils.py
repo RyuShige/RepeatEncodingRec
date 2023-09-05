@@ -249,9 +249,10 @@ def evaluate(model, model_name, dataset, args, mode):
         elif model_name == 'SASRec_RepeatEmb' or model_name=='SASRec_RepeatEmbPlus':
             predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
         # predictions = predictions[0]  # - for 1st argsort DESC
-        ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
+        # ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
+        ranks = predictions.argsort().argsort().tolist() # 正解データのランクを取得
         # ranksを1次元に変換
-        ranks = np.array(ranks).flatten()
+        ranks = np.array(ranks).flatten()[0:correct_len]
 
         valid_user += 1
 
