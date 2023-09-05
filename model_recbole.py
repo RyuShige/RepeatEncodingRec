@@ -31,6 +31,7 @@ class SASRec(torch.nn.Module):
         self.item_num = item_num
         self.dev = args.device
         self.maxlen = args.maxlen
+        self.batch_size = args.batch_size
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
@@ -92,7 +93,9 @@ class SASRec(torch.nn.Module):
 
     def log2feats(self, log_seqs):
         # log_seqsにおいて、0以外の数を数えて、item_seq_lenに格納
-        item_seq_len = np.count_nonzero(log_seqs, axis=1)
+        # item_seq_len = np.count_nonzero(log_seqs, axis=1)
+        # self.batch_size個のnumpy配列を作成
+        item_seq_len = np.full(self.batch_size, self.maxlen)
         # tenosrに変換
         item_seq_len = torch.LongTensor(item_seq_len).to(self.dev)
 
@@ -109,7 +112,8 @@ class SASRec(torch.nn.Module):
             seqs, extended_attention_mask, output_all_encoded_layers=True
         )
         output = trm_output[-1]
-        output = self.gather_indexes(output, item_seq_len - 1)
+        output = self.gather_indexes(output, item_seq_len - 1) # 与えられたseqの最後のitemのembeddingのみを取得
+        # 与えられたseq（0以外）全てのitemのembeddingを取得したい
         return output  # [B H] 与えられたseqの最後のitemのembedding、つまりその系列の最終的なコンテキスト
 
     def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs): # for training
@@ -117,7 +121,8 @@ class SASRec(torch.nn.Module):
 
         test_item_emb = self.item_emb.weight # モデルにおける各itemのembedding
         logits = torch.matmul(log_feats, test_item_emb.transpose(0, 1)) # 与えられた系列と各アイテムとの類似度
-        return logits
+        print(f'logits.shape: {logits.shape}')
+        return logits # [B, I(num_items)]
 
     # def predict(self, user_ids, log_seqs, item_indices): # for inference
     #     log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
