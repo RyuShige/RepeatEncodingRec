@@ -121,7 +121,6 @@ class SASRec(torch.nn.Module):
 
         test_item_emb = self.item_emb.weight # モデルにおける各itemのembedding
         logits = torch.matmul(log_feats, test_item_emb.transpose(0, 1)) # 与えられた系列と各アイテムとの類似度
-        print(f'logits.shape: {logits.shape}')
         return logits # [B, I(num_items)]
 
     # def predict(self, user_ids, log_seqs, item_indices): # for inference
