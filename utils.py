@@ -126,7 +126,7 @@ def data_partition(fname, data_type):
     Repeat_test = defaultdict(list)
     # assume user/item index starting from 1
     # データセット全体
-    f = open('data/%s/%s.txt'% data_type % fname, 'r') # ここが事前にt,v,tをまとめたもの
+    f = open('data/%s/%s.txt'% (data_type, fname), 'r') # ここが事前にt,v,tをまとめたもの
     for line in f:
         u, i, t, r, s, ss = line.rstrip().split(' ')
         u = int(u)
@@ -141,7 +141,7 @@ def data_partition(fname, data_type):
         sessionnum = max(s, sessionnum)
         sessionsetnum = max(ss, sessionsetnum)
     # train/valid/test
-    f = open('data/%s/%s_train.txt' % data_type % fname, 'r')
+    f = open('data/%s/%s_train.txt' % (data_type, fname), 'r')
     for line in f:
         u, i, t, r, s, ss = line.rstrip().split(' ')
         u = int(u)
@@ -153,7 +153,7 @@ def data_partition(fname, data_type):
         Session_set_train[ss].append(i)
         Session_train[ss].append(s)
         Repeat_train[ss].append(r)
-    f = open('data/%s/%s_valid.txt' % data_type % fname, 'r')
+    f = open('data/%s/%s_valid.txt' % (data_type, fname), 'r')
     for line in f:
         u, i, t, r, s, ss = line.rstrip().split(' ')
         u = int(u)
@@ -166,7 +166,7 @@ def data_partition(fname, data_type):
         Session_valid[ss].append(s)
         Repeat_valid[ss].append(r)
         sessionset_valid_min = min(ss, sessionset_valid_min)
-    f = open('data/%s/%s_test.txt' % data_type % fname, 'r')
+    f = open('data/%s/%s_test.txt' % (data_type, fname), 'r')
     for line in f:
         u, i, t, r, s, ss = line.rstrip().split(' ')
         u = int(u)
