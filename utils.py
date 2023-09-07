@@ -23,19 +23,19 @@ def sample_function(session_set_train, session_train, repeat_train, sessionsetnu
 
         seq = np.zeros([maxlen], dtype=np.int32)
         rep = np.zeros([maxlen], dtype=np.int32)
-        # pos = np.zeros([maxlen], dtype=np.int32)
+        pos = np.zeros([maxlen], dtype=np.int32)
         neg = np.zeros([maxlen], dtype=np.int32)
         nxt = session_set_train[sessionset][-1]
-        pos = nxt
+        # pos = nxt
         idx = maxlen - 1
 
         ts = set(session_set_train[sessionset])
         for i, r in zip(reversed(session_set_train[sessionset][:-1]), reversed(repeat_train[sessionset][:-1])):
             seq[idx] = i
             rep[idx] = r
-            # pos[idx] = nxt # 複数のままにして、lossを単一アイテム同士から複数アイテム同士の計算にする手もある
+            pos[idx] = nxt # 複数のままにして、lossを単一アイテム同士から複数アイテム同士の計算にする手もある
             if nxt != 0: neg[idx] = random_neq(1, itemnum + 1, ts)
-            # nxt = i
+            nxt = i
             idx -= 1
             if idx == -1: break
 
@@ -248,11 +248,11 @@ def evaluate(model, model_name, dataset, args, mode):
             predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]]) # -をつけることでargsortを降順にできる（本来は昇順）
         elif model_name == 'SASRec_RepeatEmb' or model_name=='SASRec_RepeatEmbPlus':
             predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
-        # predictions = predictions[0]  # - for 1st argsort DESC
-        # ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
-        ranks = predictions.argsort().argsort().tolist() # 正解データのランクを取得
+        predictions = predictions[0]  # - for 1st argsort DESC
+        ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
+        # ranks = predictions.argsort().argsort().tolist() # 正解データのランクを取得
         # ranksを1次元に変換
-        ranks = np.array(ranks).flatten()[0:correct_len]
+        # ranks = np.array(ranks).flatten()[0:correct_len]
 
         valid_user += 1
 
