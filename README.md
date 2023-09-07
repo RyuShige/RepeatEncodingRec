@@ -30,7 +30,7 @@ pls check paper author's [repo](https://github.com/kang205/SASRec) for detailed 
 
 ### run
 ```
-python main_repeat.py --dataset=lfm2b --project=repeat_noscaled --model=SASRec --train_dir=default --maxlen=50 --device=cuda --num_epochs=100 --split=ratio & python main_repeat.py --dataset=lfm2b --project=repeat_noscaled --model=SASRec_RepeatEmb --train_dir=default --maxlen=50 --device=cuda --num_epochs=100 --split=ratio
+python main_repeat.py --dataset=lfm2b --project=test_7 --model=SASRec_Repeat --train_dir=default --maxlen=50 --device=cpu --num_epochs=1 --split=ratio --name=name --PositionalEncoding=true --data_type=lifetime --RepeatitiveEncoding=false --wandb=true
 ```
 
 ### recbole

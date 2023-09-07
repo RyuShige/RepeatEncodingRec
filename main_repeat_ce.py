@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from model_recbole import SASRec
 from sasrec_repeat_emb_recbole import SASRec_RepeatEmb
-from sasrec_repeat_emb_plus import SASRec_RepeatEmbPlus
+from sasrec_repeat_plus import SASRec_RepeatEmbPlus
 from utils import *
 
 def str2bool(s):

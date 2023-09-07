@@ -73,7 +73,6 @@ class SASRec(torch.nn.Module):
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).to(self.dev)
         pe[:, 0::2] = torch.sin(pos * div_term)
         pe[:, 1::2] = torch.cos(pos * div_term)
-        print(f'pe: {pe}')
         return pe
     
     def log2feats(self, log_seqs, enc=False):
