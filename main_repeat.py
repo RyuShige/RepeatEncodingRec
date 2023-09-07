@@ -34,6 +34,8 @@ parser.add_argument('--device', default='cpu', type=str)
 parser.add_argument('--inference_only', default=False, type=str2bool)
 parser.add_argument('--state_dict_path', default=None, type=str)
 parser.add_argument('--split', default='ratio', type=str)
+parser.add_argument('--RepeatitiveEncoding', default=False, type=str2bool)
+parser.add_argument('--wandb', default=False, type=str2bool)
 
 args = parser.parse_args()
 if not os.path.isdir(args.dataset + '_' + args.train_dir):
@@ -42,27 +44,29 @@ with open(os.path.join(args.dataset + '_' + args.train_dir, 'args.txt'), 'w') as
     f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 f.close()
 
-wandb.init(
-    project=f"{args.project}",
-    name=f"{args.model}_{args.name}", 
-    config={
-        'dataset': args.dataset,
-        'model': args.model,
-        'batch_size': args.batch_size,
-        'lr': args.lr,
-        'maxlen': args.maxlen,
-        'hidden_units': args.hidden_units,
-        'num_blocks': args.num_blocks,
-        'num_epochs': args.num_epochs,
-        'num_heads': args.num_heads,
-        'dropout_rate': args.dropout_rate,
-        'l2_emb': args.l2_emb,
-        'device': args.device,
-        'inference_only': args.inference_only,
-        'state_dict_path': args.state_dict_path,
-        'split': args.split
-    }
-    )
+if args.wandb:
+    wandb.init(
+        project=f"{args.project}",
+        name=f"{args.model}_{args.name}", 
+        config={
+            'dataset': args.dataset,
+            'model': args.model,
+            'batch_size': args.batch_size,
+            'lr': args.lr,
+            'maxlen': args.maxlen,
+            'hidden_units': args.hidden_units,
+            'num_blocks': args.num_blocks,
+            'num_epochs': args.num_epochs,
+            'num_heads': args.num_heads,
+            'dropout_rate': args.dropout_rate,
+            'l2_emb': args.l2_emb,
+            'device': args.device,
+            'inference_only': args.inference_only,
+            'state_dict_path': args.state_dict_path,
+            'split': args.split,
+            'repeatitive_encoding': args.RepeatitiveEncoding
+        }
+        )
 
 if __name__ == '__main__':
     # global dataset
@@ -145,7 +149,7 @@ if __name__ == '__main__':
             if args.model == 'SASRec':
                 pos_logits, neg_logits = model(ss, seq, pos, neg)
             elif args.model == 'SASRec_RepeatEmb' or args.model == 'SASRec_RepeatEmbPlus':
-                pos_logits, neg_logits = model(ss, seq, repeat, pos, neg)
+                pos_logits, neg_logits = model(ss, seq, repeat, pos, neg, enc=args.RepeatitiveEncoding)
             pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()
@@ -158,7 +162,8 @@ if __name__ == '__main__':
             total_loss += loss.item()
         
         epoch_loss = loss / num_batch
-        wandb.log({"epoch": epoch, "loss": epoch_loss})
+        if args.wandb:
+            wandb.log({"epoch": epoch, "loss": epoch_loss})
         total_loss = 0 # for next epoch
 
     
@@ -186,7 +191,8 @@ if __name__ == '__main__':
             t0 = time.time()
             model.train()
 
-            wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
+            if args.wandb:
+                wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
         
         if early_count == 3:
             print('early stop at epoch {}'.format(epoch))
@@ -216,7 +222,8 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
 
-            wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
+            if args.wandb:
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
             
             break
     
@@ -247,9 +254,11 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
 
-            wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
+            if args.wandb:
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
     
     f.close()
     sampler.close()
-    wandb.finish()
+    if args.wandb:
+        wandb.finish()
     print("Done")
