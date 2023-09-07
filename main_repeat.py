@@ -35,6 +35,7 @@ parser.add_argument('--inference_only', default=False, type=str2bool)
 parser.add_argument('--state_dict_path', default=None, type=str)
 parser.add_argument('--split', default='ratio', type=str)
 parser.add_argument('--RepeatitiveEncoding', default=False, type=str2bool)
+parser.add_argument('--PositionalEncoding', default=False, type=str2bool)
 parser.add_argument('--wandb', default=False, type=str2bool)
 parser.add_argument('--data_type', default='lifetime', type=str)
 
@@ -48,7 +49,7 @@ f.close()
 if args.wandb:
     wandb.init(
         project=f"{args.project}",
-        name=f"{args.model}_{args.name}", 
+        name=f"{args.model}_{args.data_type}_{args.name}", 
         config={
             'dataset': args.dataset,
             'model': args.model,
@@ -66,6 +67,7 @@ if args.wandb:
             'state_dict_path': args.state_dict_path,
             'split': args.split,
             'repeatitive_encoding': args.RepeatitiveEncoding,
+            'positional_encoding': args.PositionalEncoding,
             'data_type': args.data_type
         }
         )
@@ -149,7 +151,7 @@ if __name__ == '__main__':
             ss, seq, repeat, pos, neg = np.array(ss), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
-                pos_logits, neg_logits = model(ss, seq, pos, neg)
+                pos_logits, neg_logits = model(ss, seq, pos, neg, enc=args.PositionalEncoding)
             elif args.model == 'SASRec_RepeatEmb' or args.model == 'SASRec_RepeatEmbPlus':
                 pos_logits, neg_logits = model(ss, seq, repeat, pos, neg, enc=args.RepeatitiveEncoding)
             pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)

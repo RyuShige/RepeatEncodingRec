@@ -62,11 +62,30 @@ class SASRec(torch.nn.Module):
             # self.pos_sigmoid = torch.nn.Sigmoid()
             # self.neg_sigmoid = torch.nn.Sigmoid()
 
-    def log2feats(self, log_seqs):
+    def positional_encoding(self, position, d_model):
+        """
+        Compute positional encoding as defined in the original Transformer paper.
+        position: maximum sequence length.
+        d_model: dimension of the model (embedding dimension).
+        """
+        pe = torch.zeros(position, d_model).to(self.dev)
+        pos = torch.arange(0, position, dtype=torch.float).unsqueeze(1).to(self.dev)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).to(self.dev)
+        pe[:, 0::2] = torch.sin(pos * div_term)
+        pe[:, 1::2] = torch.cos(pos * div_term)
+        print(f'pe: {pe}')
+        return pe
+    
+    def log2feats(self, log_seqs, enc=False):
         seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
         seqs *= self.item_emb.embedding_dim ** 0.5
-        positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
-        seqs += self.pos_emb(torch.LongTensor(positions).to(self.dev))
+        if enc:
+            max_length = log_seqs.shape[1]
+            re = self.positional_encoding(max_length, self.item_emb.embedding_dim).to(self.dev)
+            seqs += re
+        else:
+            positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
+            seqs += self.pos_emb(torch.LongTensor(positions).to(self.dev))
         seqs = self.emb_dropout(seqs)
 
         timeline_mask = torch.BoolTensor(log_seqs == 0).to(self.dev)
@@ -93,8 +112,8 @@ class SASRec(torch.nn.Module):
 
         return log_feats
 
-    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs): # for training
-        log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
+    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs, enc=False): # for training
+        log_feats = self.log2feats(log_seqs, enc) # user_ids hasn't been used yet
 
         pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
         neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
