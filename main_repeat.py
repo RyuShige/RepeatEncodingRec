@@ -36,6 +36,7 @@ parser.add_argument('--state_dict_path', default=None, type=str)
 parser.add_argument('--split', default='ratio', type=str)
 parser.add_argument('--RepeatitiveEncoding', default=False, type=str2bool)
 parser.add_argument('--wandb', default=False, type=str2bool)
+parser.add_argument('--data_type', default='lifetime', type=str)
 
 args = parser.parse_args()
 if not os.path.isdir(args.dataset + '_' + args.train_dir):
@@ -64,13 +65,14 @@ if args.wandb:
             'inference_only': args.inference_only,
             'state_dict_path': args.state_dict_path,
             'split': args.split,
-            'repeatitive_encoding': args.RepeatitiveEncoding
+            'repeatitive_encoding': args.RepeatitiveEncoding,
+            'data_type': args.data_type
         }
         )
 
 if __name__ == '__main__':
     # global dataset
-    dataset = data_partition(args.dataset)
+    dataset = data_partition(args.dataset, args.data_type)
 
     [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = dataset
     num_batch = len(session_set_train) // args.batch_size # tail? + ((len(user_train) % args.batch_size) != 0)
