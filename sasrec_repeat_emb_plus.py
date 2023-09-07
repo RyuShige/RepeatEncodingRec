@@ -71,12 +71,12 @@ class SASRec_RepeatEmbPlus(torch.nn.Module):
 
     def repetitive_encoding(self, max_len, repeat, d_model):
         # print(f'repeat: {repeat[0]}')
-        re = torch.zeros(self.batch_size, max_len, d_model)
+        re = torch.zeros(self.batch_size, max_len, d_model).to(self.dev)
         # print(f're.shape: {re.shape}')
         rep = torch.LongTensor(repeat).to(self.dev).unsqueeze(-1)
         # print(f'rep.shape: {rep.shape}')
         # print(f'rep: {rep[0]}')
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).repeat(self.batch_size, 1).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).repeat(self.batch_size, 1).unsqueeze(1).to(self.dev)
         # print(f'div_term.shape: {div_term.shape}')
         re[:, :, 0::2] = torch.sin(rep * div_term)
         re[:, :, 1::2] = torch.cos(rep * div_term)
