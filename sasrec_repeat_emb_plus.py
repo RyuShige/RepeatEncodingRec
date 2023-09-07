@@ -31,6 +31,7 @@ class SASRec_RepeatEmbPlus(torch.nn.Module):
         self.item_num = item_num
         self.repeat_num = repeat_num
         self.dev = args.device
+        self.batch_size = args.batch_size
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
@@ -68,12 +69,52 @@ class SASRec_RepeatEmbPlus(torch.nn.Module):
             # self.pos_sigmoid = torch.nn.Sigmoid()
             # self.neg_sigmoid = torch.nn.Sigmoid()
 
-    def log2feats(self, log_seqs, log_repeat):
+    def repetitive_encoding(self, max_len, repeat, d_model):
+        # print(f'repeat: {repeat[0]}')
+        re = torch.zeros(self.batch_size, max_len, d_model)
+        # print(f're.shape: {re.shape}')
+        rep = torch.LongTensor(repeat).to(self.dev).unsqueeze(-1)
+        # print(f'rep.shape: {rep.shape}')
+        # print(f'rep: {rep[0]}')
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).repeat(self.batch_size, 1).unsqueeze(1)
+        # print(f'div_term.shape: {div_term.shape}')
+        re[:, :, 0::2] = torch.sin(rep * div_term)
+        re[:, :, 1::2] = torch.cos(rep * div_term)
+        # print(f're: {re[0]}')
+        # print(f're.shape: {re.shape}')
+        return re
+    
+    def positional_encoding(self, position, d_model):
+        """
+        Compute positional encoding as defined in the original Transformer paper.
+        position: maximum sequence length.
+        d_model: dimension of the model (embedding dimension).
+        """
+        pe = torch.zeros(position, d_model)
+        # print(f'pe.shape: {pe.shape}')
+        pos = torch.arange(0, position, dtype=torch.float).unsqueeze(1)
+        # print(f'pos.shape: {pos.shape}')
+        # print(f'pos: {pos}')
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model))
+        # print(f'div_term.shape: {div_term.shape}')
+        # print(f'div_term: {div_term}')
+        # print(f'pos * div_term: {pos * div_term}')
+        pe[:, 0::2] = torch.sin(pos * div_term)
+        pe[:, 1::2] = torch.cos(pos * div_term)
+        # print(f'pe: {pe}')
+        # print(f'pe.shape: {pe.shape}')
+        return pe
+
+    def log2feats(self, log_seqs, log_repeat, enc=False):
         seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
-        seqs *= self.item_emb.embedding_dim ** 0.5 # これをrepeat mbeddingにも適用するかどうか、実験してみるしかないか
+        seqs *= self.item_emb.embedding_dim ** 0.5 # これをrepeat embeddingにも適用するかどうか、実験してみるしかないか
         positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
-        
-        seqs += self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev))
+        if enc:
+                max_length = log_seqs.shape[1]
+                re = self.repetitive_encoding(max_length, log_repeat, self.item_emb.embedding_dim).to(self.dev)
+                seqs += re
+        else:
+            seqs += self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev))
         seqs += self.pos_emb(torch.LongTensor(positions).to(self.dev))
         seqs = self.emb_dropout(seqs)
 
@@ -101,8 +142,8 @@ class SASRec_RepeatEmbPlus(torch.nn.Module):
 
         return log_feats
 
-    def forward(self, user_ids, log_seqs, log_repeat, pos_seqs, neg_seqs): # for training        
-        log_feats = self.log2feats(log_seqs, log_repeat) # user_ids hasn't been used yet
+    def forward(self, user_ids, log_seqs, log_repeat, pos_seqs, neg_seqs, enc=False): # for training        
+        log_feats = self.log2feats(log_seqs, log_repeat, enc) # user_ids hasn't been used yet
 
         pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
         neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
