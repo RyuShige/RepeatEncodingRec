@@ -31,7 +31,8 @@ class SASRec_Repeat(torch.nn.Module):
         self.item_num = item_num
         self.repeat_num = repeat_num
         self.dev = args.device
-
+        self.batch_size = args.batch_size
+        
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
         self.item_emb = torch.nn.Embedding(self.item_num+1, args.hidden_units, padding_idx=0) # +1いる？
