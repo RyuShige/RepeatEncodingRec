@@ -6,7 +6,7 @@ import wandb
 from tqdm import tqdm
 
 from model_recbole import SASRec
-from sasrec_repeat_emb_recbole import SASRec_RepeatEmb
+from sasrec_repeat_recbole import SASRec_RepeatEmb
 from sasrec_repeat_plus import SASRec_RepeatEmbPlus
 from utils import *
 

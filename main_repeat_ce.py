@@ -6,9 +6,9 @@ import wandb
 from tqdm import tqdm
 
 from model_recbole import SASRec
-from sasrec_repeat_emb_recbole import SASRec_RepeatEmb
-from sasrec_repeat_plus import SASRec_RepeatEmbPlus
-from utils import *
+from sasrec_repeat_recbole import SASRec_Repeat
+from sasrec_repeat_plus import SASRec_RepeatPlus
+from utils_recbole import *
 
 def str2bool(s):
     if s not in {'false', 'true'}:
@@ -34,6 +34,8 @@ parser.add_argument('--device', default='cpu', type=str)
 parser.add_argument('--inference_only', default=False, type=str2bool)
 parser.add_argument('--state_dict_path', default=None, type=str)
 parser.add_argument('--split', default='ratio', type=str)
+parser.add_argument('--wandb', default=False, type=str2bool)
+parser.add_argument('--data_type', default='lifetime', type=str)
 
 args = parser.parse_args()
 if not os.path.isdir(args.dataset + '_' + args.train_dir):
@@ -42,31 +44,32 @@ with open(os.path.join(args.dataset + '_' + args.train_dir, 'args.txt'), 'w') as
     f.write('\n'.join([str(k) + ',' + str(v) for k, v in sorted(vars(args).items(), key=lambda x: x[0])]))
 f.close()
 
-wandb.init(
-    project=f"{args.project}",
-    name=f"{args.model}_{args.name}", 
-    config={
-        'dataset': args.dataset,
-        'model': args.model,
-        'batch_size': args.batch_size,
-        'lr': args.lr,
-        'maxlen': args.maxlen,
-        'hidden_units': args.hidden_units,
-        'num_blocks': args.num_blocks,
-        'num_epochs': args.num_epochs,
-        'num_heads': args.num_heads,
-        'dropout_rate': args.dropout_rate,
-        'l2_emb': args.l2_emb,
-        'device': args.device,
-        'inference_only': args.inference_only,
-        'state_dict_path': args.state_dict_path,
-        'split': args.split
-    }
-    )
+if args.wandb:
+    wandb.init(
+        project=f"{args.project}",
+        name=f"{args.model}_{args.name}", 
+        config={
+            'dataset': args.dataset,
+            'model': args.model,
+            'batch_size': args.batch_size,
+            'lr': args.lr,
+            'maxlen': args.maxlen,
+            'hidden_units': args.hidden_units,
+            'num_blocks': args.num_blocks,
+            'num_epochs': args.num_epochs,
+            'num_heads': args.num_heads,
+            'dropout_rate': args.dropout_rate,
+            'l2_emb': args.l2_emb,
+            'device': args.device,
+            'inference_only': args.inference_only,
+            'state_dict_path': args.state_dict_path,
+            'split': args.split
+        }
+        )
 
 if __name__ == '__main__':
     # global dataset
-    dataset = data_partition(args.dataset)
+    dataset = data_partition(args.dataset, args.data_type)
 
     [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = dataset
     num_batch = len(session_set_train) // args.batch_size # tail? + ((len(user_train) % args.batch_size) != 0)
@@ -85,9 +88,9 @@ if __name__ == '__main__':
     if args.model == 'SASRec':
         model = SASRec(sessionsetnum, itemnum, args).to(args.device)
     elif args.model == 'SASRec_RepeatEmb':
-        model = SASRec_RepeatEmb(sessionsetnum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
+        model = SASRec_Repeat(sessionsetnum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
     elif args.model == 'SASRec_RepeatEmbPlus':
-        model = SASRec_RepeatEmbPlus(sessionsetnum, itemnum, repeatnum, args).to(args.device)
+        model = SASRec_RepeatPlus(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     
     for name, param in model.named_parameters():
         try:
@@ -158,7 +161,8 @@ if __name__ == '__main__':
             total_loss += loss.item()
         
         epoch_loss = loss / num_batch
-        wandb.log({"epoch": epoch, "loss": epoch_loss})
+        if args.wandb:
+            wandb.log({"epoch": epoch, "loss": epoch_loss})
         total_loss = 0 # for next epoch
 
     
@@ -185,7 +189,8 @@ if __name__ == '__main__':
             f.flush()            
             t0 = time.time()
             model.train()
-
+        
+        if args.wandb:
             wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
             
         
@@ -213,7 +218,8 @@ if __name__ == '__main__':
                     % (best_epoch, T, t_test[0], t_test[1], t_test[2], t_test[3], t_test[4], t_test[5]))
             f.write(str(t_test) + '\n')
             f.flush()
-
+        
+        if args.wandb:
             wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
 
             
@@ -243,11 +249,13 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
 
+        if args.wandb:
             wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
 
 
     
     f.close()
     sampler.close()
-    wandb.finish()
+    if args.wandb:
+        wandb.finish()
     print("Done")

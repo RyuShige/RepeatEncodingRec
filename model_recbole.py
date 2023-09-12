@@ -137,10 +137,10 @@ class SASRec(torch.nn.Module):
         # return logits # preds # (U, I)
 
     def predict(self, user_ids, log_seqs, item_indices): # for inference
-        log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
+        log_feats = self.log2feats(log_seqs) # 最終層の最後のアイテムの出力 [1 B]
 
-        test_item_emb = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # 指定したアイテムの学習済みembeddingを取得
-        logits = torch.matmul(log_feats, test_item_emb.transpose(0, 1))
+        test_item_emb = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # 指定したアイテムの学習済みembeddingを取得 [I B]
+        logits = torch.matmul(log_feats, test_item_emb.transpose(0, 1)) # [1 B] * [B I] = [1 I]
         # logits = torch.matmul(test_item_emb, log_feats).sum(dim=1)
 
         return logits
