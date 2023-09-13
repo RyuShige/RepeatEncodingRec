@@ -87,9 +87,9 @@ if __name__ == '__main__':
     sampler = WarpSampler(session_set_train, session_train, repeat_train, sessionsetnum, itemnum, batch_size=args.batch_size, maxlen=args.maxlen, n_workers=3)
     if args.model == 'SASRec':
         model = SASRec(sessionsetnum, itemnum, args).to(args.device)
-    elif args.model == 'SASRec_RepeatEmb':
+    elif args.model == 'SASRec_Repeat':
         model = SASRec_Repeat(sessionsetnum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
-    elif args.model == 'SASRec_RepeatEmbPlus':
+    elif args.model == 'SASRec_RepeatPlus':
         model = SASRec_RepeatPlus(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     
     for name, param in model.named_parameters():
@@ -147,7 +147,7 @@ if __name__ == '__main__':
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
                 logits = model(ss, seq, pos, neg)
-            elif args.model == 'SASRec_RepeatEmb':
+            elif args.model == 'SASRec_Repeat':
                 logits = model(ss, seq, repeat, pos, neg)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()
@@ -190,8 +190,8 @@ if __name__ == '__main__':
             t0 = time.time()
             model.train()
         
-        if args.wandb:
-            wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
+            if args.wandb:
+                wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
             
         
         if early_count == 3:
@@ -201,8 +201,8 @@ if __name__ == '__main__':
             if args.model == 'SASRec':
                 fname = 'SASRec_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'SASRec_RepeatEmb':
-                fname = 'SASRec_RepeatEmb_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+            elif args.model == 'SASRec_Repeat':
+                fname = 'SASRec_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
@@ -219,8 +219,8 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
         
-        if args.wandb:
-            wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
+            if args.wandb:
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
 
             
             break
@@ -231,8 +231,8 @@ if __name__ == '__main__':
             if args.model == 'SASRec':
                 fname = 'SASRec.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'SASRec_RepeatEmb':
-                fname = 'SASRec_RepeatEmb.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+            elif args.model == 'SASRec_Repeat':
+                fname = 'SASRec_Repeat.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(model.state_dict(), os.path.join(folder, fname))
 
@@ -249,8 +249,8 @@ if __name__ == '__main__':
             f.write(str(t_test) + '\n')
             f.flush()
 
-        if args.wandb:
-            wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
+            if args.wandb:
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
 
 
     
