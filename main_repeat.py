@@ -34,8 +34,8 @@ parser.add_argument('--device', default='cpu', type=str)
 parser.add_argument('--inference_only', default=False, type=str2bool)
 parser.add_argument('--state_dict_path', default=None, type=str)
 parser.add_argument('--split', default='ratio', type=str)
-parser.add_argument('--RepeatitiveEncoding', default=False, type=str2bool)
-parser.add_argument('--PositionalEncoding', default=False, type=str2bool)
+parser.add_argument('--re_enc', default=False, type=str2bool)
+parser.add_argument('--po_enc', default=False, type=str2bool)
 parser.add_argument('--wandb', default=False, type=str2bool)
 parser.add_argument('--data_type', default='lifetime', type=str)
 
@@ -49,7 +49,7 @@ f.close()
 if args.wandb:
     wandb.init(
         project=f"{args.project}",
-        name=f"{args.model}_{args.data_type}_repenc:{args.RepeatitiveEncoding}_posenc:{args.PositionalEncoding}_{args.name}", 
+        name=f"{args.model}_{args.data_type}_repenc:{args.re_enc}_posenc:{args.po_enc}_{args.name}", 
         config={
             'dataset': args.dataset,
             'model': args.model,
@@ -66,8 +66,8 @@ if args.wandb:
             'inference_only': args.inference_only,
             'state_dict_path': args.state_dict_path,
             'split': args.split,
-            'repeatitive_encoding': args.RepeatitiveEncoding,
-            'positional_encoding': args.PositionalEncoding,
+            'repeatitive_encoding': args.re_enc,
+            'positional_encoding': args.po_enc,
             'data_type': args.data_type
         }
         )
@@ -151,9 +151,9 @@ if __name__ == '__main__':
             ss, seq, repeat, pos, neg = np.array(ss), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
-                pos_logits, neg_logits = model(ss, seq, pos, neg, enc=args.PositionalEncoding)
+                pos_logits, neg_logits = model(ss, seq, pos, neg)
             elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus':
-                pos_logits, neg_logits = model(ss, seq, repeat, pos, neg, rep_enc=args.RepeatitiveEncoding, pos_enc=args.PositionalEncoding)
+                pos_logits, neg_logits = model(ss, seq, repeat, pos, neg)
             pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()

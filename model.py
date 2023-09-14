@@ -30,6 +30,7 @@ class SASRec(torch.nn.Module):
         self.user_num = user_num
         self.item_num = item_num
         self.dev = args.device
+        self.po_enc = args.po_enc
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
@@ -75,10 +76,10 @@ class SASRec(torch.nn.Module):
         pe[:, 1::2] = torch.cos(pos * div_term)
         return pe
     
-    def log2feats(self, log_seqs, enc=False):
+    def log2feats(self, log_seqs):
         seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
         seqs *= self.item_emb.embedding_dim ** 0.5
-        if enc:
+        if self.po_enc:
             max_length = log_seqs.shape[1]
             re = self.positional_encoding(max_length, self.item_emb.embedding_dim).to(self.dev)
             seqs += re
@@ -111,8 +112,8 @@ class SASRec(torch.nn.Module):
 
         return log_feats
 
-    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs, enc=False): # for training
-        log_feats = self.log2feats(log_seqs, enc) # user_ids hasn't been used yet
+    def forward(self, user_ids, log_seqs, pos_seqs, neg_seqs): # for training
+        log_feats = self.log2feats(log_seqs) # user_ids hasn't been used yet
 
         pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
         neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))

@@ -32,6 +32,8 @@ class SASRec_RepeatPlus(torch.nn.Module):
         self.repeat_num = repeat_num
         self.dev = args.device
         self.batch_size = args.batch_size
+        self.re_enc = args.re_enc
+        self.po_enc = args.po_enc
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
@@ -98,17 +100,17 @@ class SASRec_RepeatPlus(torch.nn.Module):
         print(f'pe: {pe}')
         return pe
 
-    def log2feats(self, log_seqs, log_repeat, rep_enc=False, pos_enc=False, pred=False):
+    def log2feats(self, log_seqs, log_repeat, pred=False):
         seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
         seqs *= self.item_emb.embedding_dim ** 0.5 # これをrepeat embeddingにも適用するかどうか、実験してみるしかないか
         positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
-        if rep_enc:
+        if self.re_enc:
             max_length = log_seqs.shape[1]
             re = self.repetitive_encoding(max_length, log_repeat, self.item_emb.embedding_dim, pred).to(self.dev)
             seqs += re
         else:
             seqs += self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev))
-        if pos_enc:
+        if self.po_enc:
             max_length = log_seqs.shape[1]
             pe = self.positional_encoding(max_length, self.item_emb.embedding_dim).to(self.dev)
             seqs += pe
@@ -140,8 +142,8 @@ class SASRec_RepeatPlus(torch.nn.Module):
 
         return log_feats
 
-    def forward(self, user_ids, log_seqs, log_repeat, pos_seqs, neg_seqs, rep_enc=False, pos_enc=False): # for training        
-        log_feats = self.log2feats(log_seqs, log_repeat, rep_enc, pos_enc) # user_ids hasn't been used yet
+    def forward(self, user_ids, log_seqs, log_repeat, pos_seqs, neg_seqs): # for training        
+        log_feats = self.log2feats(log_seqs, log_repeat) # user_ids hasn't been used yet
 
         pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev))
         neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
