@@ -64,7 +64,9 @@ if args.wandb:
             'device': args.device,
             'inference_only': args.inference_only,
             'state_dict_path': args.state_dict_path,
-            'split': args.split
+            'split': args.split,
+            'data_type': args.data_type,
+            're_enc': args.re_enc
         }
         )
 
