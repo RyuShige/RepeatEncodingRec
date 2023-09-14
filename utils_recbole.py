@@ -186,6 +186,8 @@ def data_partition(fname, data_type):
 def evaluate(model, model_name, dataset, args, mode):
     assert mode in {'valid', 'test'}, "mode must be either 'valid' or 'test'"
     [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = copy.deepcopy(dataset)
+    PRECITION_10 = 0.0
+    PRECITION_20 = 0.0
     RECALL_10 = 0.0
     RECALL_20 = 0.0
     MRR_10 = 0.0
@@ -259,34 +261,57 @@ def evaluate(model, model_name, dataset, args, mode):
         # 10未満のアイテム数をカウント
         c = 0
         top = 20
+        dcg = 0
         h = 0
-        for r in ranks:
+        for i, r in enumerate(ranks):
             if r < 10: # この数字はtopkによる
                 c += 1
                 h = 1
+                if r == 0:
+                    dcg += 1
+                else:
+                    dcg += 1 / np.log2(r + 1)
                 if r < top:
                     top = r
-        
+        PRECITION_10 += c / 10
         RECALL_10 += c / correct_len
         HT_10 += h
         if top < 20:
             MRR_10 += 1.0 / (top + 1)
+        dcg_p = 1
+        for i in range(correct_len):
+            if i == 0:
+                continue
+            dcg_p += 1 / np.log2(i + 1)
+        NDCG_10 += dcg / dcg_p
+
         
         # 20未満のアイテム数をカウント
         c = 0
         top = 20
         h = 0
-        for r in ranks:
+        for i, r in enumerate(ranks):
             if r < 20: # この数字はtopkによる
                 c += 1
                 h = 1
+                if r == 0:
+                    dcg += 1
+                else:
+                    dcg += 1 / np.log2(r + 1)
                 if r < top:
                     top = r
-        
+
+        PRECITION_20 += c / 20
         RECALL_20 += c / correct_len
         HT_20 += h
         if top < 20:
             MRR_20 += 1.0 / (top + 1)
+        dcg_p = 1
+        for i in range(correct_len):
+            if i == 0:
+                continue
+            dcg_p += 1 / np.log2(i + 1)
+        NDCG_20 += dcg / dcg_p
 
         # if rank < 10:
         #     # RECALL += 
@@ -297,4 +322,6 @@ def evaluate(model, model_name, dataset, args, mode):
         #     print('.', end="")
         #     sys.stdout.flush()
 
-    return RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
+
+    return PRECITION_10 / valid_user, PRECITION_20 / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
+

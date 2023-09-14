@@ -187,18 +187,19 @@ if __name__ == '__main__':
             else:
                 early_count += 1
             
-            print('epoch:%d, time: %f(s), valid (Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
-                    % (epoch, T, t_valid[0], t_valid[1], t_valid[2],  t_valid[3], t_valid[4], t_valid[5]))
+            print('epoch:%d, time: %f(s), valid (Precision@10: %.4f, Precision@20: %.4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
+                    % (epoch, T, t_valid[0], t_valid[1], t_valid[2],  t_valid[3], t_valid[4], t_valid[5], t_valid[6], t_valid[7], t_valid[8], t_valid[9]))
     
             f.write(str(t_valid) + '\n')
             f.flush()            
             t0 = time.time()
             model.train()
-
-            if args.wandb:
-                wandb.log({"epoch": epoch, "time": T, "valid_Rcall@10": t_valid[0], "valid_Rcall@20": t_valid[1], "valid_MRR@10": t_valid[2], "valid_MRR@20": t_valid[3], "valid_HR@10": t_valid[4], "valid_HR@20": t_valid[5]})
         
-        if early_count == 5:
+            if args.wandb:
+                wandb.log({"epoch": epoch, "time": T, "valid_Precision@10": t_valid[0], "valid_Precision@20": t_valid[1], "valid_Rcall@10": t_valid[2], "valid_Rcall@20": t_valid[3], "valid_MRR@10": t_valid[4], "valid_MRR@20": t_valid[5], "valid_NDCG@10": t_valid[6], "valid_NDCG@20": t_valid[7], "valid_HR@10": t_valid[8], "valid_HR@20": t_valid[9]})
+            
+        
+        if early_count == 3:
             print('early stop at epoch {}'.format(epoch))
             print('testing')
             folder = args.dataset + '_' + args.train_dir
@@ -221,13 +222,14 @@ if __name__ == '__main__':
 
             # ロードした重みを用いてテストの評価を行います。
             t_test = evaluate(model, args.model, dataset, args, mode='test')
-            print('best epoch:%d, time: %f(s), test (Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, HR@10: %.4f, HR@20: %.4f)'
-                    % (best_epoch, T, t_test[0], t_test[1], t_test[2], t_test[3], t_test[4], t_test[5]))
+            print('epoch:%d, time: %f(s), test (Precision@10: %.4f, Precision@20: %.4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
+                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8], t_test[9]))
             f.write(str(t_test) + '\n')
             f.flush()
-
+        
             if args.wandb:
-                wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
+                wandb.log({"epoch": epoch, "time": T, "test_Precision@10": t_valid[0], "test_Precision@20": t_valid[1], "test_Rcall@10": t_valid[2], "test_Rcall@20": t_valid[3], "test_MRR@10": t_valid[4], "test_MRR@20": t_valid[5], "test_NDCG@10": t_valid[6], "test_NDCG@20": t_valid[7], "test_HR@10": t_valid[8], "test_HR@20": t_valid[9]})
+
             
             break
     
@@ -253,13 +255,16 @@ if __name__ == '__main__':
 
             # ロードした重みを用いてテストの評価を行います。
             t_test = evaluate(model, args.model, dataset, args, mode='test')
-            print('epoch:%d, time: %f(s), test (Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, HR@10: %.4f, HR@20: %.4f)'
-                    % (epoch, T, t_test[0], t_test[1], t_test[2], t_test[3], t_test[4], t_test[5]))
+            print('epoch:%d, time: %f(s), test (Precision@10: %.4f, Precision@20: %.4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
+                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8], t_test[9]))
+
             f.write(str(t_test) + '\n')
             f.flush()
 
             if args.wandb:
-                wandb.log({"best_epoch": best_epoch, "time": T, "test_Rcall@10": t_test[0], "test_Rcall@20": t_test[1], "test_MRR@10": t_test[2], "test_MRR@20": t_test[3], "test_HR@10": t_test[4], "test_HR@20": t_test[5]})
+                wandb.log({"epoch": epoch, "time": T, "test_Precision@10": t_valid[0], "test_Precision@20": t_valid[1], "test_Rcall@10": t_valid[2], "test_Rcall@20": t_valid[3], "test_MRR@10": t_valid[4], "test_MRR@20": t_valid[5], "test_NDCG@10": t_valid[6], "test_NDCG@20": t_valid[7], "test_HR@10": t_valid[8], "test_HR@20": t_valid[9]})
+
+
     
     f.close()
     sampler.close()
