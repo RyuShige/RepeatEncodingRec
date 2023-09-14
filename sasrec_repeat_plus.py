@@ -68,20 +68,20 @@ class SASRec_RepeatPlus(torch.nn.Module):
 
             # self.pos_sigmoid = torch.nn.Sigmoid()
             # self.neg_sigmoid = torch.nn.Sigmoid()
-
-    def repetitive_encoding(self, max_len, repeat, d_model):
-        # print(f'repeat: {repeat[0]}')
-        re = torch.zeros(self.batch_size, max_len, d_model).to(self.dev)
-        # print(f're.shape: {re.shape}')
-        rep = torch.LongTensor(repeat).to(self.dev).unsqueeze(-1)
-        # print(f'rep.shape: {rep.shape}')
-        # print(f'rep: {rep[0]}')
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).repeat(self.batch_size, 1).unsqueeze(1).to(self.dev)
-        # print(f'div_term.shape: {div_term.shape}')
-        re[:, :, 0::2] = torch.sin(rep * div_term)
-        re[:, :, 1::2] = torch.cos(rep * div_term)
-        # print(f're: {re[0]}')
-        # print(f're.shape: {re.shape}')
+    
+    def repetitive_encoding(self, max_len, repeat, d_model, pred=False):
+        if pred:
+            re = torch.zeros(1, max_len, d_model).to(self.dev)
+            rep = torch.LongTensor(repeat).to(self.dev).unsqueeze(-1)
+            div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).repeat(1, 1).unsqueeze(1).to(self.dev)
+            re[:, :, 0::2] = torch.sin(rep * div_term)
+            re[:, :, 1::2] = torch.cos(rep * div_term)
+        else:
+            re = torch.zeros(self.batch_size, max_len, d_model).to(self.dev)
+            rep = torch.LongTensor(repeat).to(self.dev).unsqueeze(-1)
+            div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).repeat(self.batch_size, 1).unsqueeze(1).to(self.dev)
+            re[:, :, 0::2] = torch.sin(rep * div_term)
+            re[:, :, 1::2] = torch.cos(rep * div_term)
         return re
     
     def positional_encoding(self, position, d_model):
@@ -95,15 +95,16 @@ class SASRec_RepeatPlus(torch.nn.Module):
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).to(self.dev)
         pe[:, 0::2] = torch.sin(pos * div_term)
         pe[:, 1::2] = torch.cos(pos * div_term)
+        print(f'pe: {pe}')
         return pe
 
-    def log2feats(self, log_seqs, log_repeat, rep_enc=False, pos_enc=False):
+    def log2feats(self, log_seqs, log_repeat, rep_enc=False, pos_enc=False, pred=False):
         seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
         seqs *= self.item_emb.embedding_dim ** 0.5 # これをrepeat embeddingにも適用するかどうか、実験してみるしかないか
         positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
         if rep_enc:
             max_length = log_seqs.shape[1]
-            re = self.repetitive_encoding(max_length, log_repeat, self.item_emb.embedding_dim).to(self.dev)
+            re = self.repetitive_encoding(max_length, log_repeat, self.item_emb.embedding_dim, pred).to(self.dev)
             seqs += re
         else:
             seqs += self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev))
@@ -154,7 +155,7 @@ class SASRec_RepeatPlus(torch.nn.Module):
         return pos_logits, neg_logits # pos_pred, neg_pred
 
     def predict(self, user_ids, log_seqs, log_repeat, item_indices): # for inference
-        log_feats = self.log2feats(log_seqs, log_repeat) # user_ids hasn't been used yet
+        log_feats = self.log2feats(log_seqs, log_repeat, pred=True) # user_ids hasn't been used yet
 
         final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste
 

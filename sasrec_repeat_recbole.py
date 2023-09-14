@@ -33,6 +33,8 @@ class SASRec_Repeat(torch.nn.Module):
         self.dev = args.device
         self.maxlen = args.maxlen
         self.batch_size = args.batch_size
+        self.hidden_units = args.hidden_units
+        self.re_enc = args.re_enc
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
@@ -96,7 +98,22 @@ class SASRec_Repeat(torch.nn.Module):
         extended_attention_mask = torch.where(extended_attention_mask, 0.0, -10000.0)
         return extended_attention_mask
 
-    def log2feats(self, log_seqs, log_repeat):
+    def repetitive_encoding(self, max_len, repeat, d_model, pred=False):
+        if pred:
+            re = torch.zeros(1, max_len, d_model).to(self.dev)
+            rep = torch.LongTensor(repeat).to(self.dev).unsqueeze(-1)
+            div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).repeat(1, 1).unsqueeze(1).to(self.dev)
+            re[:, :, 0::2] = torch.sin(rep * div_term)
+            re[:, :, 1::2] = torch.cos(rep * div_term)
+        else:
+            re = torch.zeros(self.batch_size, max_len, d_model).to(self.dev)
+            rep = torch.LongTensor(repeat).to(self.dev).unsqueeze(-1)
+            div_term = torch.exp(torch.arange(0, d_model, 2).float() * -(np.log(10000.0) / d_model)).repeat(self.batch_size, 1).unsqueeze(1).to(self.dev)
+            re[:, :, 0::2] = torch.sin(rep * div_term)
+            re[:, :, 1::2] = torch.cos(rep * div_term)
+        return re
+
+    def log2feats(self, log_seqs, log_repeat, pred=False):
         # log_seqsにおいて、0以外の数を数えて、item_seq_lenに格納
         # item_seq_len = np.count_nonzero(log_seqs, axis=1)
         # self.batch_size個のnumpy配列を作成
@@ -108,7 +125,10 @@ class SASRec_Repeat(torch.nn.Module):
         seqs = self.item_emb(log_seqs)
         positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
 
-        repeat = self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev)) # recboleでは.long()を使っている
+        if self.re_enc:
+            repeat = self.repetitive_encoding(self.maxlen, log_repeat, self.hidden_units, pred).to(self.dev)
+        else:
+            repeat = self.repeat_emb(torch.LongTensor(log_repeat).to(self.dev)) # recboleでは.long()を使っている
         input_concat = torch.cat((seqs, repeat), -1)
         seqs = self.concat_layer(input_concat)
 
@@ -147,7 +167,7 @@ class SASRec_Repeat(torch.nn.Module):
         # return logits # preds # (U, I)
 
     def predict(self, user_ids, log_seqs, log_repeat, item_indices): # for inference
-        log_feats = self.log2feats(log_seqs, log_repeat) # user_ids hasn't been used yet
+        log_feats = self.log2feats(log_seqs, log_repeat, pred=True) # user_ids hasn't been used yet
 
         test_item_emb = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # 指定したアイテムの学習済みembeddingを取得
         logits = torch.matmul(log_feats, test_item_emb.transpose(0, 1))
