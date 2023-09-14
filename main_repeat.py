@@ -228,7 +228,7 @@ if __name__ == '__main__':
             f.flush()
         
             if args.wandb:
-                wandb.log({"epoch": epoch, "time": T, "test_Precision@10": t_test[0], "test_Precision@20": t_test[1], "test_Rcall@10": t_test[2], "test_Rcall@20": t_test[3], "test_MRR@10": t_test[4], "test_MRR@20": t_test[5], "test_NDCG@10": t_test[6], "test_NDCG@20": t_test[7], "test_HR@10": t_test[8], "test_HR@20": t_test[9]})
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_Precision@10": t_test[0], "test_Precision@20": t_test[1], "test_Rcall@10": t_test[2], "test_Rcall@20": t_test[3], "test_MRR@10": t_test[4], "test_MRR@20": t_test[5], "test_NDCG@10": t_test[6], "test_NDCG@20": t_test[7], "test_HR@10": t_test[8], "test_HR@20": t_test[9]})
 
             
             break
@@ -262,8 +262,8 @@ if __name__ == '__main__':
             f.flush()
 
             if args.wandb:
-                wandb.log({"epoch": epoch, "time": T, "test_Precision@10": t_test[0], "test_Precision@20": t_test[1], "test_Rcall@10": t_test[2], "test_Rcall@20": t_test[3], "test_MRR@10": t_test[4], "test_MRR@20": t_test[5], "test_NDCG@10": t_test[6], "test_NDCG@20": t_test[7], "test_HR@10": t_test[8], "test_HR@20": t_test[9]})
-
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_Precision@10": t_test[0], "test_Precision@20": t_test[1], "test_Rcall@10": t_test[2], "test_Rcall@20": t_test[3], "test_MRR@10": t_test[4], "test_MRR@20": t_test[5], "test_NDCG@10": t_test[6], "test_NDCG@20": t_test[7], "test_HR@10": t_test[8], "test_HR@20": t_test[9]})
+    
 
     
     f.close()
