@@ -35,7 +35,7 @@ class SASRec(torch.nn.Module):
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
-        self.item_emb = torch.nn.Embedding(self.item_num+1, args.hidden_units, padding_idx=0) # +1いる？
+        self.item_emb = torch.nn.Embedding(self.item_num+1, args.hidden_units, padding_idx=0) # +1いる？あったほうが良い、0はpadding用
         self.pos_emb = torch.nn.Embedding(self.maxlen, args.hidden_units) # TO IMPROVE
 
         self.inner_size = 256
