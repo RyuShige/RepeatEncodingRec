@@ -201,7 +201,7 @@ def evaluate(model, model_name, dataset, args, mode):
     session_sets = list(session_set_valid.keys()) if mode == 'valid' else list(session_set_test.keys())
     for ss in tqdm(session_sets):
         # print('session_set_test[ss]', session_set_test[ss])
-        if (mode == 'valid' and len(session_set_valid[ss]) < 1) or (mode == 'test' and len(session_set_test[ss]) < 1): continue
+        if (mode == 'valid' and len(session_set_valid[ss]) < 2) or (mode == 'test' and len(session_set_test[ss]) < 2): continue
 
         seq = np.zeros([args.maxlen], dtype=np.int32)
         s = np.zeros([args.maxlen], dtype=np.int32)
