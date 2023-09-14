@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from layer import FeedForward
 
 
 class PointWiseFeedForward(torch.nn.Module):
@@ -57,7 +58,11 @@ class SASRec(torch.nn.Module):
             new_fwd_layernorm = torch.nn.LayerNorm(args.hidden_units, eps=1e-8)
             self.forward_layernorms.append(new_fwd_layernorm)
 
-            new_fwd_layer = PointWiseFeedForward(args.hidden_units, args.dropout_rate)
+            # 一旦この実装をベースモデルで試してみる、last layer normは不要かも？
+            if args.ffn:
+                new_fwd_layer = FeedForward(args.hidden_units, args.hidden_units*4, args.dropout_rate, 'gelu', 1e-12)
+            else:
+                new_fwd_layer = PointWiseFeedForward(args.hidden_units, args.dropout_rate)
             self.forward_layers.append(new_fwd_layer)
 
             # self.pos_sigmoid = torch.nn.Sigmoid()
@@ -106,6 +111,7 @@ class SASRec(torch.nn.Module):
 
             seqs = self.forward_layernorms[i](seqs)
             seqs = self.forward_layers[i](seqs)
+            print(f'seqs.shape: {seqs.shape}')
             seqs *=  ~timeline_mask.unsqueeze(-1)
 
         log_feats = self.last_layernorm(seqs) # (U, T, C) -> (U, -1, C)
