@@ -240,21 +240,41 @@ def evaluate(model, model_name, dataset, args, mode):
         #     t = np.random.randint(1, itemnum + 1)
         #     while t == 0: t = np.random.randint(1, itemnum + 1) # item_id=0は存在しない（パディング）のでやり直し
         #     item_idx.append(t)
-        # itemnum個の配列を作成(全アイテム)
-        t = np.arange(1, itemnum + 1)
-        # item_idxに含まれないアイテム
-        t = np.setdiff1d(t, item_idx) 
-        item_idx.extend(t)
+        
+        if args.search:
+            # itemnum個の配列を作成(全アイテム)
+            items = np.arange(1, itemnum + 1)
+            max_items = []
+            
+            for i in item_idx:
+                if model_name == 'SASRec':
+                    predictions = model.predict(*[np.array(l) for l in [[ss], [seq], items]]) # -をつけることでargsortを降順にできる（本来は昇順）
+                elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
+                    predictions = model.predict(*[np.array(l) for l in [[ss], [seq], [rep], items]])
+                predictions = predictions[0]
+                # 最大値のインデックスを取得
+                max_idx = np.argmax(predictions)
+                max_items.append(max_idx+1)
+                seq.append(max_idx+1)
+                # seqの最初の要素を削除
+                seq.pop(0)
+            
+            # max_itemsを利用してranksを作成
+            # ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
+        else:
+            # itemnum個の配列を作成(全アイテム)
+            t = np.arange(1, itemnum + 1)
+            # item_idxに含まれないアイテム
+            t = np.setdiff1d(t, item_idx) 
+            item_idx.extend(t)
 
-        if model_name == 'SASRec':
-            predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]]) # -をつけることでargsortを降順にできる（本来は昇順）
-        elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
-            predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
-        predictions = predictions[0]  # - for 1st argsort DESC
-        ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
-        # ranks = predictions.argsort().argsort().tolist() # 正解データのランクを取得
-        # ranksを1次元に変換
-        # ranks = np.array(ranks).flatten()[0:correct_len]
+            
+            if model_name == 'SASRec':
+                predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]]) # -をつけることでargsortを降順にできる（本来は昇順）
+            elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
+                predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
+            predictions = predictions[0]  # - for 1st argsort DESC
+            ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
 
         valid_user += 1
 

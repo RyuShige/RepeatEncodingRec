@@ -113,7 +113,8 @@ class SASRec(torch.nn.Module):
             seqs = self.forward_layers[i](seqs)
             seqs *=  ~timeline_mask.unsqueeze(-1)
 
-        log_feats = self.last_layernorm(seqs) # (U, T, C) -> (U, -1, C)
+        # log_feats = self.last_layernorm(seqs) # (U, T, C) -> (U, -1, C)
+        log_feats = seqs
 
         return log_feats
 
