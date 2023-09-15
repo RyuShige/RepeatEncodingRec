@@ -234,33 +234,52 @@ def evaluate(model, model_name, dataset, args, mode):
             item_idx = session_set_test[ss][max_s+1:]
         
         correct_len = len(item_idx)
-
-        # ランダムに選んだ100個のアイテムと正解データをモデルがどのように予測するか（全アイテムでやると時間がかかりすぎるため、一度やってみてもいいが）
-        # for _ in range(100):
-        #     t = np.random.randint(1, itemnum + 1)
-        #     while t == 0: t = np.random.randint(1, itemnum + 1) # item_id=0は存在しない（パディング）のでやり直し
-        #     item_idx.append(t)
         
+        # item_indexが20以下の場合、各predictのtopkを順々に格納するようにしているが、繰り返しが多く発生する可能性がある。
+        # 正直、一番初めの予測だけを保管に用いた場合と比較したい
         if args.search:
             # itemnum個の配列を作成(全アイテム)
             items = np.arange(1, itemnum + 1)
-            max_items = []
+            # 要素数20個の配列を作成、予測したアイテムを格納する
+            max_items = np.zeros([20], dtype=np.int32)
             
-            for i in item_idx:
+            item = item_idx
+            if correct_len > 20:
+                item = item_idx[:20]
+            
+            correct_len_2 = len(item)
+            
+            for i in range(len(item)):
                 if model_name == 'SASRec':
-                    predictions = model.predict(*[np.array(l) for l in [[ss], [seq], items]]) # -をつけることでargsortを降順にできる（本来は昇順）
+                    predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], items]]) # -をつけることでargsortを降順にできる（本来は昇順）
                 elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
-                    predictions = model.predict(*[np.array(l) for l in [[ss], [seq], [rep], items]])
-                predictions = predictions[0]
-                # 最大値のインデックスを取得
-                max_idx = np.argmax(predictions)
-                max_items.append(max_idx+1)
-                seq.append(max_idx+1)
+                    predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], items]])
+                predictions = predictions[0].tolist()
+                # 20 - correct_len + 1個のトップアイテムを取得
+                top_items = np.argsort(predictions)[:20 - correct_len_2 + 1]
+                top_items = top_items + 1
+                # print(f'top_items: {top_items}')
+
+                max_items[i] = top_items[0]
+                c = 1
+                skip_index = 20 - (20 - correct_len_2)
+                index = i + skip_index
+                while index<20:
+                    max_items[index] = top_items[c]
+                    c += 1
+                    skip_index = (20 - (20 - correct_len_2)) * c
+                    index = i + skip_index
+                np.append(seq, top_items[0])
                 # seqの最初の要素を削除
-                seq.pop(0)
-            
+                seq = seq[1:]
             # max_itemsを利用してranksを作成
-            # ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
+            ranks = np.zeros([correct_len], dtype=np.int32)
+            ranks.fill(100)
+            for cnt, i in enumerate(item_idx):
+                for j, m in enumerate(max_items):
+                    if i == m:
+                        ranks[cnt] = j
+                        break
         else:
             # itemnum個の配列を作成(全アイテム)
             t = np.arange(1, itemnum + 1)
@@ -268,7 +287,6 @@ def evaluate(model, model_name, dataset, args, mode):
             t = np.setdiff1d(t, item_idx) 
             item_idx.extend(t)
 
-            
             if model_name == 'SASRec':
                 predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]]) # -をつけることでargsortを降順にできる（本来は昇順）
             elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
