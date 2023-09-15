@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from layer import FeedForward
 
 
 class PointWiseFeedForward(torch.nn.Module):
@@ -34,6 +35,7 @@ class SASRec_Repeat(torch.nn.Module):
         self.batch_size = args.batch_size
         self.re_enc = args.re_enc
         self.po_enc = args.po_enc
+        self.ffn = args.ffn
         
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
@@ -65,7 +67,11 @@ class SASRec_Repeat(torch.nn.Module):
             new_fwd_layernorm = torch.nn.LayerNorm(args.hidden_units, eps=1e-8)
             self.forward_layernorms.append(new_fwd_layernorm)
 
-            new_fwd_layer = PointWiseFeedForward(args.hidden_units, args.dropout_rate)
+            if args.ffn:
+                new_fwd_layer = FeedForward(args.hidden_units, args.hidden_units*4, args.dropout_rate, 'gelu', 1e-12)
+            else:
+                new_fwd_layer = PointWiseFeedForward(args.hidden_units, args.dropout_rate)
+            self.forward_layers.append(new_fwd_layer)
             self.forward_layers.append(new_fwd_layer)
 
             # self.pos_sigmoid = torch.nn.Sigmoid()
@@ -143,7 +149,8 @@ class SASRec_Repeat(torch.nn.Module):
             seqs = self.forward_layers[i](seqs)
             seqs *=  ~timeline_mask.unsqueeze(-1)
 
-        log_feats = self.last_layernorm(seqs) # (U, T, C) -> (U, -1, C)
+        if self.ffn == False:
+            log_feats = self.last_layernorm(seqs) # (U, T, C) -> (U, -1, C)
 
         return log_feats
 

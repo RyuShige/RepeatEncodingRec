@@ -32,6 +32,7 @@ class SASRec(torch.nn.Module):
         self.item_num = item_num
         self.dev = args.device
         self.po_enc = args.po_enc
+        self.ffn = args.ffn
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
@@ -113,7 +114,8 @@ class SASRec(torch.nn.Module):
             seqs = self.forward_layers[i](seqs)
             seqs *=  ~timeline_mask.unsqueeze(-1)
 
-        # log_feats = self.last_layernorm(seqs) # (U, T, C) -> (U, -1, C)
+        if self.ffn == False:
+            log_feats = self.last_layernorm(seqs) # (U, T, C) -> (U, -1, C)
         log_feats = seqs
 
         return log_feats
