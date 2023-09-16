@@ -269,7 +269,7 @@ def evaluate(model, model_name, dataset, args, mode):
                     c += 1
                     skip_index = (20 - (20 - correct_len_2)) * c
                     index = i + skip_index
-                np.append(seq, top_items[0])
+                seq = np.append(seq, top_items[0])
                 # seqの最初の要素を削除
                 seq = seq[1:]
             # max_itemsを利用してranksを作成
