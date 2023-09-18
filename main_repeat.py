@@ -181,7 +181,7 @@ if __name__ == '__main__':
             t1 = time.time() - t0
             T += t1
             print('Evaluating')
-            t_valid = evaluate(model, args.model, dataset, args, mode='valid')
+            t_valid = evaluate(model, args.model, dataset, args, mode='valid', repeat_data=repeat_data)
             
             # early stopping
             if early_stop < t_valid[5]:
