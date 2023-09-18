@@ -78,7 +78,10 @@ if __name__ == '__main__':
     # global dataset
     dataset = data_partition(args.dataset, args.data_type)
 
-    [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = dataset
+    # valid_repeatのデータベース
+    repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_valid.csv')
+
+    [u_valid, u_test, session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = dataset
     num_batch = len(session_set_train) // args.batch_size # tail? + ((len(user_train) % args.batch_size) != 0)
     cc = 0.0
     for ss in session_set_train:
@@ -181,8 +184,8 @@ if __name__ == '__main__':
             t_valid = evaluate(model, args.model, dataset, args, mode='valid')
             
             # early stopping
-            if early_stop < t_valid[3]:
-                early_stop = t_valid[3] # MRR@20
+            if early_stop < t_valid[5]:
+                early_stop = t_valid[5] # MRR@20
                 best_model_params = model.state_dict().copy()  # 最高のモデルのパラメータを一時的に保存
                 best_epoch = epoch
                 early_count = 0
@@ -223,7 +226,8 @@ if __name__ == '__main__':
             model.load_state_dict(torch.load(best_model_path, map_location=torch.device(args.device)))
 
             # ロードした重みを用いてテストの評価を行います。
-            t_test = evaluate(model, args.model, dataset, args, mode='test')
+            repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
+            t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
             print('epoch:%d, time: %f(s), test (Precision@10: %.4f, Precision@20: %.4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
                     % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8], t_test[9]))
             f.write(str(t_test) + '\n')
@@ -256,7 +260,8 @@ if __name__ == '__main__':
             model.load_state_dict(torch.load(best_model_path, map_location=torch.device(args.device)))
 
             # ロードした重みを用いてテストの評価を行います。
-            t_test = evaluate(model, args.model, dataset, args, mode='test')
+            repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
+            t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
             print('epoch:%d, time: %f(s), test (Precision@10: %.4f, Precision@20: %.4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
                     % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8], t_test[9]))
 

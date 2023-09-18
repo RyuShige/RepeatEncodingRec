@@ -3,6 +3,7 @@ import copy
 import torch
 import random
 import numpy as np
+import pandas as pd
 from collections import defaultdict
 from multiprocessing import Process, Queue
 from tqdm import tqdm
@@ -115,6 +116,8 @@ def data_partition(fname, data_type):
     sessionsetnum = 0
     sessionset_valid_min = np.inf
     sessionset_test_min = np.inf
+    U_valid = defaultdict(list)
+    U_test = defaultdict(list)
     Session_set_train = defaultdict(list)
     Session_set_valid = defaultdict(list)
     Session_set_test = defaultdict(list)
@@ -162,6 +165,7 @@ def data_partition(fname, data_type):
         r = int(r)
         s = int(s)
         ss = int(ss)
+        U_valid[ss].append(u)
         Session_set_valid[ss].append(i)
         Session_valid[ss].append(s)
         Repeat_valid[ss].append(r)
@@ -175,17 +179,18 @@ def data_partition(fname, data_type):
         r = int(r)
         s = int(s)
         ss = int(ss)
+        U_test[ss].append(u)
         Session_set_test[ss].append(i)
         Session_test[ss].append(s)
         Repeat_test[ss].append(r)
         sessionset_test_min = min(ss, sessionset_test_min)
 
-    return [Session_set_train, Session_set_valid, Session_set_test, Session_train, Session_valid, Session_test, Repeat_train, Repeat_valid, Repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min]
+    return [U_valid, U_test, Session_set_train, Session_set_valid, Session_set_test, Session_train, Session_valid, Session_test, Repeat_train, Repeat_valid, Repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min]
 
 # evaluate
-def evaluate(model, model_name, dataset, args, mode):
+def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
     assert mode in {'valid', 'test'}, "mode must be either 'valid' or 'test'"
-    [session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = copy.deepcopy(dataset)
+    [u_valid, u_test, session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = copy.deepcopy(dataset)
     PRECITION_10 = 0.0
     PRECITION_20 = 0.0
     RECALL_10 = 0.0
@@ -202,14 +207,17 @@ def evaluate(model, model_name, dataset, args, mode):
     for ss in tqdm(session_sets):
         # print('session_set_test[ss]', session_set_test[ss])
         if (mode == 'valid' and len(session_set_valid[ss]) < 2) or (mode == 'test' and len(session_set_test[ss]) < 2): continue
-
+        
         seq = np.zeros([args.maxlen], dtype=np.int32)
         s = np.zeros([args.maxlen], dtype=np.int32)
         rep = np.zeros([args.maxlen], dtype=np.int32)
+        u = np.zeros([1], dtype=np.int32)
 
         # seqとitem_idxを作成
         idx = args.maxlen - 1
         if mode == 'valid':
+            u = u_valid[ss] # ユーザを読み込む
+            u = min(u)
             s = session_valid[ss] # session set中のsession idを読み込む
             # 最も大きいsession idをもつindexを取得
             max_s = np.argmax(s) # このindexまでがseq(session setの最後のセッションの最初の曲)
@@ -222,6 +230,8 @@ def evaluate(model, model_name, dataset, args, mode):
                 if idx == 0: break
             item_idx = session_set_valid[ss][max_s+1:]
         elif mode == 'test':
+            u = u_test[ss]
+            u = min(u)
             s = session_test[ss]
             max_s = np.argmax(s)
             input_seq = session_set_test[ss][:max_s+1]
@@ -269,9 +279,17 @@ def evaluate(model, model_name, dataset, args, mode):
                     c += 1
                     skip_index = (20 - (20 - correct_len_2)) * c
                     index = i + skip_index
+                # seqにtop_items[0]（予測トップ1）を追加
                 seq = np.append(seq, top_items[0])
+                # uに基づいてrepにtop_items[0]の繰り返し回数を追加
+                # repeat_dataを参照してu, top_items[0]の繰り返し回数を取得
+                repeat_values = repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == top_items[0])]['r'].values
+                top_item_repeat = repeat_values[0] if len(repeat_values) > 0 else 0
+                rep = np.append(rep, top_item_repeat+1)
                 # seqの最初の要素を削除
                 seq = seq[1:]
+                # repの最初の要素を削除
+                rep = rep[1:]
             # max_itemsを利用してranksを作成
             ranks = np.zeros([correct_len], dtype=np.int32)
             ranks.fill(100)
