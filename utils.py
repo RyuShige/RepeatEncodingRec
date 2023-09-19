@@ -243,46 +243,34 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 idx -= 1
                 if idx == 0: break
             item_idx = session_set_test[ss][max_s+1:]
-        
+
         correct_len = len(item_idx)
         
-        # item_indexが20以下の場合、各predictのtopkを順々に格納するようにしているが、繰り返しが多く発生する可能性がある。
-        # 正直、一番初めの予測だけを保管に用いた場合と比較したい
+        # item_indexが20以下の場合、最後の予測の2位以下のアイテムで補完する（予測アイテム内の繰り返しは排除）
         if args.search:
             # itemnum個の配列を作成(全アイテム)
             items = np.arange(1, itemnum + 1)
             # 要素数20個の配列を作成、予測したアイテムを格納する
-            max_items = np.zeros([20], dtype=np.int32)
+            max_items = []
             
-            item = item_idx
-            if correct_len > 20:
-                item = item_idx[:20]
-            
-            correct_len_2 = len(item)
-            
-            for i in range(len(item)):
+            for i in range(len(item_idx)):
                 if model_name == 'SASRec':
-                    predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], items]]) # -をつけることでargsortを降順にできる（本来は昇順）
+                    predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], items]]) # -をつけることでargsortを降順にできる（本来は昇順）# searchの場合はitemsは全てのアイテム
                 elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
                     predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], items]])
                 predictions = predictions[0].tolist()
                 # トップアイテムを取得
                 top_items = np.argsort(predictions) # 0始まり
+                top_items = top_items + 1 # 1始まりに変換
                 
                 # 重複がないように予測を格納
-                for t in top_items:
-                    if t not in max_items:
-                        max_items[i] = t
-                        break
+                # top_itemsからmax_itemsの重複を除く
+                top_items = np.setdiff1d(top_items, max_items)
+                max_items.append(top_items[0])
 
-                c = 1
-                skip_index = 20 - (20 - correct_len_2)
-                index = i + skip_index
-                while index<20:
-                    max_items[index] = top_items[c]
-                    c += 1
-                    skip_index = (20 - (20 - correct_len_2)) * c
-                    index = i + skip_index
+                if (len(max_items) == correct_len) and correct_len < 20:
+                    for c in range(1, 20-correct_len+1):
+                        max_items.append(top_items[c])
                 # seqにtop_items[0]（予測トップ1）を追加
                 seq = np.append(seq, top_items[0]+1)
                 # uに基づいてrepにtop_items[0]の繰り返し回数を追加
@@ -297,9 +285,9 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             # max_itemsを利用してranksを作成
             ranks = np.zeros([correct_len], dtype=np.int32)
             ranks.fill(100)
-            for cnt, i in enumerate(item_idx):
+            for cnt, item in enumerate(item_idx):
                 for j, m in enumerate(max_items):
-                    if i == m:
+                    if item == m:
                         ranks[cnt] = j
                         break
         else:
