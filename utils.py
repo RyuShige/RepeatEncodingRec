@@ -191,6 +191,7 @@ def data_partition(fname, data_type):
 def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
     assert mode in {'valid', 'test'}, "mode must be either 'valid' or 'test'"
     [u_valid, u_test, session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = copy.deepcopy(dataset)
+    R_PRECITION = 0.0
     PRECITION_10 = 0.0
     PRECITION_20 = 0.0
     RECALL_10 = 0.0
@@ -265,12 +266,15 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
                     predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], items]])
                 predictions = predictions[0].tolist()
-                # 20 - correct_len + 1個のトップアイテムを取得
-                top_items = np.argsort(predictions)[:20 - correct_len_2 + 1]
-                top_items = top_items + 1
-                # print(f'top_items: {top_items}')
+                # トップアイテムを取得
+                top_items = np.argsort(predictions) # 0始まり
+                
+                # 重複がないように予測を格納
+                for t in top_items:
+                    if t not in max_items:
+                        max_items[i] = t
+                        break
 
-                max_items[i] = top_items[0]
                 c = 1
                 skip_index = 20 - (20 - correct_len_2)
                 index = i + skip_index
@@ -280,10 +284,10 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                     skip_index = (20 - (20 - correct_len_2)) * c
                     index = i + skip_index
                 # seqにtop_items[0]（予測トップ1）を追加
-                seq = np.append(seq, top_items[0])
+                seq = np.append(seq, top_items[0]+1)
                 # uに基づいてrepにtop_items[0]の繰り返し回数を追加
                 # repeat_dataを参照してu, top_items[0]の繰り返し回数を取得
-                repeat_values = repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == top_items[0])]['r'].values
+                repeat_values = repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == (top_items[0]+1))]['r'].values
                 top_item_repeat = repeat_values[0] if len(repeat_values) > 0 else 0
                 rep = np.append(rep, top_item_repeat+1)
                 # seqの最初の要素を削除
@@ -313,6 +317,13 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
 
         valid_user += 1
+
+        # R-Precision
+        c = 0
+        for i, r in enumerate(ranks):
+            if r < correct_len:
+                c += 1
+        R_PRECITION += c / correct_len
 
         # 10未満のアイテム数をカウント
         c = 0
@@ -379,4 +390,5 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         #     sys.stdout.flush()
 
 
-    return PRECITION_10 / valid_user, PRECITION_20 / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
+    # return PRECITION_10 / valid_user, PRECITION_20 / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
+    return R_PRECITION / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
