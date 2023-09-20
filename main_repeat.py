@@ -184,8 +184,8 @@ if __name__ == '__main__':
             t_valid = evaluate(model, args.model, dataset, args, mode='valid', repeat_data=repeat_data)
             
             # early stopping
-            if early_stop < t_valid[5]:
-                early_stop = t_valid[5] # MRR@20
+            if early_stop < t_valid[4]:
+                early_stop = t_valid[4] # MRR@20
                 best_model_params = model.state_dict().copy()  # 最高のモデルのパラメータを一時的に保存
                 best_epoch = epoch
                 early_count = 0
