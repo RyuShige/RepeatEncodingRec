@@ -4,14 +4,14 @@ from layer import FeedForward
 
 
 class PointWiseFeedForward(torch.nn.Module):
-    def __init__(self, hidden_units, dropout_rate):
+    def __init__(self, hidden_units, inner_size, dropout_rate):
 
         super(PointWiseFeedForward, self).__init__()
 
-        self.conv1 = torch.nn.Conv1d(hidden_units, hidden_units, kernel_size=1)
+        self.conv1 = torch.nn.Conv1d(hidden_units, inner_size, kernel_size=1)
         self.dropout1 = torch.nn.Dropout(p=dropout_rate)
         self.relu = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv1d(hidden_units, hidden_units, kernel_size=1)
+        self.conv2 = torch.nn.Conv1d(inner_size, hidden_units, kernel_size=1)
         self.dropout2 = torch.nn.Dropout(p=dropout_rate)
 
     def forward(self, inputs):
@@ -70,7 +70,7 @@ class SASRec_Repeat(torch.nn.Module):
             if args.ffn:
                 new_fwd_layer = FeedForward(args.hidden_units, args.hidden_units*4, args.dropout_rate, 'gelu', 1e-12)
             else:
-                new_fwd_layer = PointWiseFeedForward(args.hidden_units, args.dropout_rate)
+                new_fwd_layer = PointWiseFeedForward(args.hidden_units, args.inner_size, args.dropout_rate)
             self.forward_layers.append(new_fwd_layer)
             self.forward_layers.append(new_fwd_layer)
 
