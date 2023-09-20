@@ -265,8 +265,9 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 
                 # 重複がないように予測を格納
                 # top_itemsからmax_itemsの重複を除く
-                top_items = np.setdiff1d(top_items, max_items)
-                max_items.append(top_items[0])
+                unique_top_items = [item for item in top_items if item not in max_items]
+                # max_itemsにunique_top_itemsを追加
+                max_items.extend(unique_top_items)
 
                 if (len(max_items) == correct_len) and correct_len < 20:
                     for c in range(1, 20-correct_len+1):
@@ -291,10 +292,11 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                         ranks[cnt] = j
                         break
         else:
+            ###################################### ここも検証
             # itemnum個の配列を作成(全アイテム)
             t = np.arange(1, itemnum + 1)
             # item_idxに含まれないアイテム
-            t = np.setdiff1d(t, item_idx) 
+            t = np.setdiff1d(t, item_idx)  # setdiff1dはソートがかかる。この場合、ソートされても問題ない
             item_idx.extend(t)
 
             if model_name == 'SASRec':
