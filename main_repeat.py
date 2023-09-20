@@ -176,7 +176,7 @@ if __name__ == '__main__':
         total_loss = 0 # for next epoch
 
     
-        if epoch % 20 == 0:
+        if epoch % 50 == 0:
             model.eval()
             t1 = time.time() - t0
             T += t1
