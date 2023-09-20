@@ -277,7 +277,7 @@ if __name__ == '__main__':
             # ロードした重みを用いてテストの評価を行います。
             repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
             t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
-            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
+            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
                     % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7]))
 
             f.write(str(t_test) + '\n')
