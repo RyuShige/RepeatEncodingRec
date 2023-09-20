@@ -196,8 +196,8 @@ if __name__ == '__main__':
             else:
                 early_count += 1
             
-            print('epoch:%d, time: %f(s), valid (R-Precision: %.4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
-                    % (epoch, T, t_valid[0], t_valid[1], t_valid[2],  t_valid[3], t_valid[4], t_valid[5], t_valid[6], t_valid[7], t_valid[8]))
+            print('epoch:%d, time: %f(s), valid (R-Precision: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
+                    % (epoch, T, t_valid[0], t_valid[1], t_valid[2],  t_valid[3], t_valid[4], t_valid[5], t_valid[6], t_valid[7]))
     
             f.write(str(t_valid) + '\n')
             f.flush()            
@@ -205,7 +205,7 @@ if __name__ == '__main__':
             model.train()
         
             if args.wandb:
-                wandb.log({"epoch": epoch, "time": T, "valid_R-Precision": t_valid[0], "valid_Rcall@10": t_valid[1], "valid_Rcall@20": t_valid[2], "valid_MRR@10": t_valid[3], "valid_MRR@20": t_valid[4], "valid_NDCG@10": t_valid[5], "valid_NDCG@20": t_valid[6], "valid_HR@10": t_valid[7], "valid_HR@20": t_valid[8]})
+                wandb.log({"epoch": epoch, "time": T, "valid_R-Precision": t_valid[0], "valid_Next-HR:": t_valid[1], "valid_Rcall@10": t_valid[2], "valid_Rcall@20": t_valid[3], "valid_MRR@10": t_valid[4], "valid_MRR@20": t_valid[5], "valid_NDCG@10": t_valid[6], "valid_NDCG@20": t_valid[7]})
             
         
         if early_count == 3:
@@ -235,13 +235,13 @@ if __name__ == '__main__':
             # ロードした重みを用いてテストの評価を行います。
             repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
             t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
-            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
-                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8]))
+            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
+                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7]))
             f.write(str(t_test) + '\n')
             f.flush()
         
             if args.wandb:
-                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_Rcall@10": t_test[1], "test_Rcall@20": t_test[2], "test_MRR@10": t_test[3], "test_MRR@20": t_test[4], "test_NDCG@10": t_test[5], "test_NDCG@20": t_test[6], "test_HR@10": t_test[7], "test_HR@20": t_test[8]})
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_Next-HR": t_test[1], "test_Rcall@10": t_test[2], "test_Rcall@20": t_test[3], "test_MRR@10": t_test[4], "test_MRR@20": t_test[5], "test_NDCG@10": t_test[6], "test_NDCG@20": t_test[7]})
 
             
             break
@@ -251,17 +251,17 @@ if __name__ == '__main__':
             folder = args.dataset + '_' + args.train_dir
             if args.model == 'SASRec':
                 fname = 'SASRec.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+                fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_Repeat':
                 fname = 'SASRec_Repeat.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+                fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_RepeatPlus':
                 fname = 'SASRec_RepeatPlus.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+                fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_Repeat_Out':
                 fname = 'SASRec_Repeat_Out.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            torch.save(model.state_dict(), os.path.join(folder, fname))
+                fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            torch.save(best_model_params, os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
             best_model_path = os.path.join(folder, fname)
@@ -272,15 +272,15 @@ if __name__ == '__main__':
             # ロードした重みを用いてテストの評価を行います。
             repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
             t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
-            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
-                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8]))
+            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f, HR@10: %.4f, HR@20: %.4f))'
+                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7]))
 
             f.write(str(t_test) + '\n')
             f.flush()
 
             if args.wandb:
-                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_Rcall@10": t_test[1], "test_Rcall@20": t_test[2], "test_MRR@10": t_test[3], "test_MRR@20": t_test[4], "test_NDCG@10": t_test[5], "test_NDCG@20": t_test[6], "test_HR@10": t_test[7], "test_HR@20": t_test[8]})
-    
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_Next-HR": t_test[1], "test_Rcall@10": t_test[2], "test_Rcall@20": t_test[3], "test_MRR@10": t_test[4], "test_MRR@20": t_test[5], "test_NDCG@10": t_test[6], "test_NDCG@20": t_test[7]})
+
 
     
     f.close()

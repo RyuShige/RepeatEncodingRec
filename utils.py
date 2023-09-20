@@ -192,6 +192,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
     assert mode in {'valid', 'test'}, "mode must be either 'valid' or 'test'"
     [u_valid, u_test, session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = copy.deepcopy(dataset)
     R_PRECITION = 0.0
+    NEXT_HR = 0.0
     PRECITION_10 = 0.0
     PRECITION_20 = 0.0
     RECALL_10 = 0.0
@@ -203,6 +204,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
     HT_10 = 0.0
     HT_20 = 0.0
     valid_user = 0.0
+    valid_item = 0.0
 
     session_sets = list(session_set_valid.keys()) if mode == 'valid' else list(session_set_test.keys())
     for ss in tqdm(session_sets):
@@ -305,13 +307,17 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
 
         valid_user += 1
+        valid_item += correct_len
 
         # R-Precision
-        c = 0
         for i, r in enumerate(ranks):
             if r < correct_len:
-                c += 1
-        R_PRECITION += c / correct_len
+                R_PRECITION += 1
+
+        # Next HR
+        for i, r in enumerate(ranks):
+            if r == i:
+                NEXT_HR += 1
 
         # 10未満のアイテム数をカウント
         c = 0
@@ -379,4 +385,4 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
 
 
     # return PRECITION_10 / valid_user, PRECITION_20 / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
-    return R_PRECITION / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
+    return R_PRECITION / valid_item, NEXT_HR / valid_item, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user
