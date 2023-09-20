@@ -204,7 +204,7 @@ if __name__ == '__main__':
                 wandb.log({"epoch": epoch, "time": T, "valid_R-Precision": t_valid[0], "valid_Rcall@10": t_valid[1], "valid_Rcall@20": t_valid[2], "valid_MRR@10": t_valid[3], "valid_MRR@20": t_valid[4], "valid_NDCG@10": t_valid[5], "valid_NDCG@20": t_valid[6], "valid_HR@10": t_valid[7], "valid_HR@20": t_valid[8]})
             
         
-        if early_count == 3:
+        if early_count == 100000:
             print('early stop at epoch {}'.format(epoch))
             print('testing')
             folder = args.dataset + '_' + args.train_dir
