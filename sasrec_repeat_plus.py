@@ -36,6 +36,7 @@ class SASRec_RepeatPlus(torch.nn.Module):
         self.re_enc = args.re_enc
         self.po_enc = args.po_enc
         self.ffn = args.ffn
+        self.scale = args.scale
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
@@ -107,7 +108,8 @@ class SASRec_RepeatPlus(torch.nn.Module):
 
     def log2feats(self, log_seqs, log_repeat, pred=False):
         seqs = self.item_emb(torch.LongTensor(log_seqs).to(self.dev))
-        seqs *= self.item_emb.embedding_dim ** 0.5 # これをrepeat embeddingにも適用するかどうか、実験してみるしかないか
+        if self.scale:
+            seqs *= self.item_emb.embedding_dim ** 0.5 # これをrepeat embeddingにも適用するかどうか、実験してみるしかないか
         positions = np.tile(np.array(range(log_seqs.shape[1])), [log_seqs.shape[0], 1])
         if self.re_enc:
             max_length = log_seqs.shape[1]

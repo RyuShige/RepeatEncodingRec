@@ -42,6 +42,7 @@ parser.add_argument('--wandb', default=False, type=str2bool)
 parser.add_argument('--data_type', default='lifetime', type=str)
 parser.add_argument('--ffn', default=False, type=str2bool)
 parser.add_argument('--search', default=False, type=str2bool)
+parser.add_argument('--scale', default=True, type=str2bool)
 
 args = parser.parse_args()
 if not os.path.isdir(args.dataset + '_' + args.train_dir):
