@@ -250,7 +250,6 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         if args.search:
             # itemnum個の配列を作成(全アイテム)
             items = np.arange(1, itemnum + 1)
-            # 要素数20個の配列を作成、予測したアイテムを格納する
             max_items = []
             
             for i in range(len(item_idx)):
@@ -267,7 +266,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 # top_itemsからmax_itemsの重複を除く
                 unique_top_items = [item for item in top_items if item not in max_items]
                 # max_itemsにunique_top_itemsを追加
-                max_items.extend(unique_top_items)
+                max_items.append(unique_top_items[0])
 
                 if (len(max_items) == correct_len) and correct_len < 20:
                     for c in range(1, 20-correct_len+1):
