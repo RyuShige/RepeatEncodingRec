@@ -73,7 +73,11 @@ if args.wandb:
             'split': args.split,
             'repeatitive_encoding': args.re_enc,
             'positional_encoding': args.po_enc,
-            'data_type': args.data_type
+            'data_type': args.data_type,
+            'ffn': args.ffn,
+            'search': args.search,
+            'scale': args.scale,
+            'inner_size': args.inner_size
         }
         )
 
