@@ -247,7 +247,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         correct_len = len(item_idx)
         
         # item_indexが20以下の場合、最後の予測の2位以下のアイテムで補完する（予測アイテム内の繰り返しは排除）
-        if args.search:
+        if args.search and mode == 'test':
             # itemnum個の配列を作成(全アイテム)
             items = np.arange(1, itemnum + 1)
             max_items = []
@@ -255,7 +255,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             for i in range(len(item_idx)):
                 if model_name == 'SASRec':
                     predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], items]]) # -をつけることでargsortを降順にできる（本来は昇順）# searchの場合はitemsは全てのアイテム
-                elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
+                elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='SASRec_Repeat_Out':
                     predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], items]])
                 predictions = predictions[0].tolist()
                 # トップアイテムを取得
@@ -291,7 +291,6 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                         ranks[cnt] = j
                         break
         else:
-            ###################################### ここも検証
             # itemnum個の配列を作成(全アイテム)
             t = np.arange(1, itemnum + 1)
             # item_idxに含まれないアイテム
@@ -300,7 +299,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
 
             if model_name == 'SASRec':
                 predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]]) # -をつけることでargsortを降順にできる（本来は昇順）
-            elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
+            elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='SASRec_Repeat_Out':
                 predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
             predictions = predictions[0]  # - for 1st argsort DESC
             ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
