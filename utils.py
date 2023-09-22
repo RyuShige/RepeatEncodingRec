@@ -250,7 +250,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 idx -= 1
                 if idx == 0: break
             item_idx = session_set_test[ss][max_s+1:]
-            rep_idx = np.array(repeat_valid[ss][max_s+1:])
+            rep_idx = np.array(repeat_test[ss][max_s+1:])
             # rep_idxが2以上のindexを取得
             rep_idx = np.where(rep_idx > 1)[0]
 
@@ -401,7 +401,5 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         #     print('.', end="")
         #     sys.stdout.flush()
 
-    if valid_item_rep == 0:
-        valid_item_rep = 1
     # return PRECITION_10 / valid_user, PRECITION_20 / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
     return R_PRECITION / valid_item, R_PRECITION_REP / valid_item_rep, NEXT_HR / valid_item, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user
