@@ -1,3 +1,6 @@
+'''
+lightSANsのコードを参考にするために、recboleのSASRecの実装+BCEが上手くいくか確認するためのコード
+'''
 import os
 import time
 import torch

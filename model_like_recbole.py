@@ -1,3 +1,7 @@
+'''
+lightSANsのコードを参考にするために、recboleのSASRecの実装+BCEが上手くいくか確認するためのコード
+'''
+
 import numpy as np
 import torch
 from layer import TransformerEncoder
