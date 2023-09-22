@@ -9,8 +9,8 @@ import wandb
 from tqdm import tqdm
 
 from model_like_recbole import SASRec
-from sasrec_repeat import SASRec_Repeat
-from sasrec_repeat_plus import SASRec_RepeatPlus
+from sasrec_repeat_like_recbole import SASRec_Repeat
+from sasrec_repeat_plus_like_recbole import SASRec_RepeatPlus
 from sasrec_repeat_out import SASRec_Repeat_Out
 from utils import *
 
@@ -29,7 +29,7 @@ parser.add_argument('--batch_size', default=128, type=int)
 parser.add_argument('--lr', default=0.001, type=float)
 parser.add_argument('--maxlen', default=50, type=int)
 parser.add_argument('--hidden_units', default=64, type=int)
-parser.add_argument('--inner_size', default=64, type=int)
+parser.add_argument('--inner_size', default=256, type=int)
 parser.add_argument('--num_blocks', default=2, type=int)
 parser.add_argument('--num_epochs', default=201, type=int)
 parser.add_argument('--num_heads', default=1, type=int)
@@ -164,6 +164,7 @@ if __name__ == '__main__':
         if args.inference_only: break # just to decrease identition
         print('epoch: ', epoch)
         for step in tqdm(range(num_batch)): # tqdm(range(num_batch), total=num_batch, ncols=70, leave=False, unit='b'):
+            break
             ss, seq, repeat, pos, neg = sampler.next_batch() # tuples to ndarray
             ss, seq, repeat, pos, neg = np.array(ss), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
@@ -188,7 +189,7 @@ if __name__ == '__main__':
         total_loss = 0 # for next epoch
 
     
-        if epoch % 20 == 0:
+        if epoch % 1 == 0:
             model.eval()
             t1 = time.time() - t0
             T += t1
