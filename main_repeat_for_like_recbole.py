@@ -164,6 +164,7 @@ if __name__ == '__main__':
         if args.inference_only: break # just to decrease identition
         print('epoch: ', epoch)
         for step in tqdm(range(num_batch)): # tqdm(range(num_batch), total=num_batch, ncols=70, leave=False, unit='b'):
+            break
             ss, seq, repeat, pos, neg = sampler.next_batch() # tuples to ndarray
             ss, seq, repeat, pos, neg = np.array(ss), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
@@ -188,7 +189,7 @@ if __name__ == '__main__':
         total_loss = 0 # for next epoch
 
     
-        if epoch % 20 == 0:
+        if epoch % 1 == 0:
             model.eval()
             t1 = time.time() - t0
             T += t1

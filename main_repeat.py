@@ -193,8 +193,8 @@ if __name__ == '__main__':
             t_valid = evaluate(model, args.model, dataset, args, mode='valid', repeat_data=repeat_data)
             
             # early stopping
-            if early_stop < t_valid[4]:
-                early_stop = t_valid[4] # MRR@20
+            if early_stop < t_valid[0]:
+                early_stop = t_valid[0] # R-Precision
                 best_model_params = model.state_dict().copy()  # 最高のモデルのパラメータを一時的に保存
                 best_epoch = epoch
                 early_count = 0
@@ -218,16 +218,16 @@ if __name__ == '__main__':
             print('testing')
             folder = args.dataset + '_' + args.train_dir
             if args.model == 'SASRec':
-                fname = 'SASRec_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = 'SASRec_BestModel.R-Precision={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_Repeat':
-                fname = 'SASRec_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = 'SASRec_Repeat_BestModel.R-Precision={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_RepeatPlus':
-                fname = 'SASRec_RepeatPlus_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = 'SASRec_RepeatPlus_BestModel.R-Precision={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'SASRec_Repeat_Out':
-                fname = 'SASRec_Repeat_Out_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = 'SASRec_Repeat_Out_BestModel.R-Precision={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
