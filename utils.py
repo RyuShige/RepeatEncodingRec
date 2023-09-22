@@ -305,7 +305,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             # itemnum個の配列を作成(全アイテム)
             t = np.arange(1, itemnum + 1)
             # item_idxに含まれないアイテム
-            t = np.setdiff1d(t, item_idx)  # setdiff1dはソートがかかる。この場合、ソートされても問題ない
+            t = np.setdiff1d(t, item_idx)  
             item_idx.extend(t)
 
             if model_name == 'SASRec':
