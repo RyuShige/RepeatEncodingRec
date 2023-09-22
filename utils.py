@@ -272,7 +272,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
 
                 if (len(max_items) == correct_len) and correct_len < 20:
                     for c in range(1, 20-correct_len+1):
-                        max_items.append(top_items[c])
+                        max_items.append(unique_top_items[c])
                 # seqにtop_items[0]（予測トップ1）を追加
                 seq = np.append(seq, top_items[0]+1)
                 # uに基づいてrepにtop_items[0]の繰り返し回数を追加
