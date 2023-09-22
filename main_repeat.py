@@ -161,6 +161,7 @@ if __name__ == '__main__':
         if args.inference_only: break # just to decrease identition
         print('epoch: ', epoch)
         for step in tqdm(range(num_batch)): # tqdm(range(num_batch), total=num_batch, ncols=70, leave=False, unit='b'):
+            break
             ss, seq, repeat, pos, neg = sampler.next_batch() # tuples to ndarray
             ss, seq, repeat, pos, neg = np.array(ss), np.array(seq), np.array(repeat), np.array(pos), np.array(neg)
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
@@ -185,7 +186,7 @@ if __name__ == '__main__':
         total_loss = 0 # for next epoch
 
     
-        if epoch % 20 == 0:
+        if epoch % 1 == 0:
             model.eval()
             t1 = time.time() - t0
             T += t1
@@ -201,8 +202,8 @@ if __name__ == '__main__':
             else:
                 early_count += 1
             
-            print('epoch:%d, time: %f(s), valid (R-Precision: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
-                    % (epoch, T, t_valid[0], t_valid[1], t_valid[2],  t_valid[3], t_valid[4], t_valid[5], t_valid[6], t_valid[7]))
+            print('epoch:%d, time: %f(s), valid (R-Precision: %.4f, R-Precision-Rep: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
+                    % (epoch, T, t_valid[0], t_valid[1], t_valid[2],  t_valid[3], t_valid[4], t_valid[5], t_valid[6], t_valid[7], t_valid[8]))
     
             f.write(str(t_valid) + '\n')
             f.flush()            
@@ -210,7 +211,7 @@ if __name__ == '__main__':
             model.train()
         
             if args.wandb:
-                wandb.log({"epoch": epoch, "time": T, "valid_R-Precision": t_valid[0], "valid_Next-HR:": t_valid[1], "valid_Rcall@10": t_valid[2], "valid_Rcall@20": t_valid[3], "valid_MRR@10": t_valid[4], "valid_MRR@20": t_valid[5], "valid_NDCG@10": t_valid[6], "valid_NDCG@20": t_valid[7]})
+                wandb.log({"epoch": epoch, "time": T, "valid_R-Precision": t_valid[0], "valid_R-Precision-Rep": t_valid[1], "valid_Next-HR": t_valid[2], "valid_Rcall@10": t_valid[3], "valid_Rcall@20": t_valid[4], "valid_MRR@10": t_valid[5], "valid_MRR@20": t_valid[6], "valid_NDCG@10": t_valid[7], "valid_NDCG@20": t_valid[8]})
             
         
         if early_count == 3:
@@ -240,13 +241,13 @@ if __name__ == '__main__':
             # ロードした重みを用いてテストの評価を行います。
             repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
             t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
-            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
-                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7]))
+            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, R-Precision-Rep: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
+                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8]))
             f.write(str(t_test) + '\n')
             f.flush()
         
             if args.wandb:
-                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_Next-HR": t_test[1], "test_Rcall@10": t_test[2], "test_Rcall@20": t_test[3], "test_MRR@10": t_test[4], "test_MRR@20": t_test[5], "test_NDCG@10": t_test[6], "test_NDCG@20": t_test[7]})
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_R-Precision-Rep": t_test[1], "test_Next-HR": t_test[2], "test_Rcall@10": t_test[3], "test_Rcall@20": t_test[4], "test_MRR@10": t_test[5], "test_MRR@20": t_test[6], "test_NDCG@10": t_test[7], "test_NDCG@20": t_test[8]})
 
             
             break
@@ -277,14 +278,14 @@ if __name__ == '__main__':
             # ロードした重みを用いてテストの評価を行います。
             repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
             t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
-            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
-                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7]))
+            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, R-Precision-Rep: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
+                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8]))
 
             f.write(str(t_test) + '\n')
             f.flush()
 
             if args.wandb:
-                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_Next-HR": t_test[1], "test_Rcall@10": t_test[2], "test_Rcall@20": t_test[3], "test_MRR@10": t_test[4], "test_MRR@20": t_test[5], "test_NDCG@10": t_test[6], "test_NDCG@20": t_test[7]})
+                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_R-Precision-Rep": t_test[1], "test_Next-HR": t_test[2], "test_Rcall@10": t_test[3], "test_Rcall@20": t_test[4], "test_MRR@10": t_test[5], "test_MRR@20": t_test[6], "test_NDCG@10": t_test[7], "test_NDCG@20": t_test[8]})
 
 
     

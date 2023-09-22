@@ -192,6 +192,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
     assert mode in {'valid', 'test'}, "mode must be either 'valid' or 'test'"
     [u_valid, u_test, session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = copy.deepcopy(dataset)
     R_PRECITION = 0.0
+    R_PRECITION_REP = 0.0
     NEXT_HR = 0.0
     PRECITION_10 = 0.0
     PRECITION_20 = 0.0
@@ -205,6 +206,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
     HT_20 = 0.0
     valid_user = 0.0
     valid_item = 0.0
+    valid_item_rep = 0.0
 
     session_sets = list(session_set_valid.keys()) if mode == 'valid' else list(session_set_test.keys())
     for ss in tqdm(session_sets):
@@ -232,6 +234,9 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 idx -= 1
                 if idx == 0: break
             item_idx = session_set_valid[ss][max_s+1:]
+            rep_idx = np.array(repeat_valid[ss][max_s+1:])
+            # rep_idxが2以上のindexを取得
+            rep_idx = np.where(rep_idx > 1)[0]
         elif mode == 'test':
             u = u_test[ss]
             u = min(u)
@@ -245,8 +250,12 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 idx -= 1
                 if idx == 0: break
             item_idx = session_set_test[ss][max_s+1:]
+            rep_idx = np.array(repeat_valid[ss][max_s+1:])
+            # rep_idxが2以上のindexを取得
+            rep_idx = np.where(rep_idx > 1)[0]
 
         correct_len = len(item_idx)
+        correct_len_rep = len(rep_idx)
         
         # item_indexが20以下の場合、最後の予測の2位以下のアイテムで補完する（予測アイテム内の繰り返しは排除）
         if args.search and mode == 'test':
@@ -305,14 +314,23 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
             predictions = predictions[0]  # - for 1st argsort DESC
             ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
+        
+        # ranksからrep_idxに対応するアイテムだけを取得
+        ranks_rep = np.array(ranks)[rep_idx]
 
         valid_user += 1
         valid_item += correct_len
+        valid_item_rep += correct_len_rep
 
         # R-Precision
         for i, r in enumerate(ranks):
             if r < correct_len:
                 R_PRECITION += 1
+        
+        # R-Precision-Repeat
+        for i, r in enumerate(ranks_rep):
+            if r < correct_len_rep:
+                R_PRECITION_REP += 1
 
         # Next HR
         for i, r in enumerate(ranks):
@@ -385,4 +403,4 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
 
 
     # return PRECITION_10 / valid_user, PRECITION_20 / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
-    return R_PRECITION / valid_item, NEXT_HR / valid_item, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user
+    return R_PRECITION / valid_item, R_PRECITION_REP / valid_item_rep,NEXT_HR / valid_item, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user
