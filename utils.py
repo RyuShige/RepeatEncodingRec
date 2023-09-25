@@ -286,7 +286,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 seq = np.append(seq, top_items[0]+1)
                 # uに基づいてrepにtop_items[0]の繰り返し回数を追加
                 # repeat_dataを参照してu, top_items[0]の繰り返し回数を取得
-                repeat_values = repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == (top_items[0]+1))]['r'].values
+                repeat_values = repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == (top_items[0]))]['r'].values
                 top_item_repeat = repeat_values[0] if len(repeat_values) > 0 else 0
                 rep = np.append(rep, top_item_repeat+1)
                 # seqの最初の要素を削除
