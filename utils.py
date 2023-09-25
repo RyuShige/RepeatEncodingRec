@@ -283,7 +283,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                     for c in range(1, 20-correct_len+1):
                         max_items.append(unique_top_items[c])
                 # seqにtop_items[0]（予測トップ1）を追加
-                seq = np.append(seq, top_items[0]+1)
+                seq = np.append(seq, top_items[0])
                 # uに基づいてrepにtop_items[0]の繰り返し回数を追加
                 # repeat_dataを参照してu, top_items[0]の繰り返し回数を取得
                 repeat_values = repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == (top_items[0]))]['r'].values
