@@ -45,7 +45,7 @@ class LightSANs_Repeat(torch.nn.Module):
         # https://stackoverflow.com/questions/42704283/adding-l1-l2-regularization-in-pytorch
         self.item_emb = torch.nn.Embedding(self.item_num+1, args.hidden_units, padding_idx=0) # +1いる？
         self.pos_emb = torch.nn.Embedding(self.maxlen, args.hidden_units) # TO IMPROVE
-        self.rep_emb = torch.nn.Embedding(self.repeat_num+1, args.hidden_units, padding_idx=0) # TO IMPROVE
+        self.repeat_emb = torch.nn.Embedding(self.repeat_num+1, args.hidden_units, padding_idx=0) # TO IMPROVE
 
         self.inner_size = args.inner_size
         self.attn_dropout_prob = 0.5
@@ -83,13 +83,14 @@ class LightSANs_Repeat(torch.nn.Module):
         if isinstance(module, torch.nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
 
-    def embedding_layer(self, item_seq):
+    def embedding_layer(self, item_seq, repeat_seq):
         position_ids = torch.arange(
             item_seq.size(1), dtype=torch.long, device=item_seq.device
         )
         position_embedding = self.pos_emb(position_ids)
+        repeat_embedding = self.repeat_emb(repeat_seq)
         item_emb = self.item_emb(item_seq)
-        return item_emb, position_embedding
+        return item_emb, position_embedding, repeat_embedding
     
     def gather_indexes(self, output, gather_index):
         """Gathers the vectors at the specific positions over a minibatch"""
@@ -126,12 +127,13 @@ class LightSANs_Repeat(torch.nn.Module):
     def log2feats(self, log_seqs, log_reps, pred=False):
         log_seqs = torch.LongTensor(log_seqs).to(self.dev)
         log_reps = torch.LongTensor(log_reps).to(self.dev)
-        item_emb, position_embedding = self.embedding_layer(log_seqs)
+        item_emb, position_embedding, repeat_embedding = self.embedding_layer(log_seqs, log_reps)
+        repeat_position_emb = repeat_embedding + position_embedding
         item_emb = self.layernorm(item_emb)
         item_emb = self.emb_dropout(item_emb)
 
         trm_output = self.trm_encoder(
-            item_emb, position_embedding, output_all_encoded_layers=True
+            item_emb, repeat_position_emb, output_all_encoded_layers=True
         )
         output = trm_output[-1]
         return output  # [B I H]

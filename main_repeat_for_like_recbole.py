@@ -12,6 +12,7 @@ from model_like_recbole import SASRec
 from sasrec_repeat_like_recbole import SASRec_Repeat
 from sasrec_repeat_plus_like_recbole import SASRec_RepeatPlus
 from light_sans import LightSANs
+from light_sans_repeat import LightSANs_Repeat
 from utils import *
 
 def str2bool(s):
@@ -113,6 +114,8 @@ if __name__ == '__main__':
         model = SASRec_RepeatPlus(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     elif args.model == 'LightSANs':
         model = LightSANs(sessionsetnum, itemnum, repeatnum, args).to(args.device)
+    elif args.model == 'LightSANs_Repeat':
+        model = LightSANs_Repeat(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     
     for name, param in model.named_parameters():
         try:
@@ -169,7 +172,7 @@ if __name__ == '__main__':
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
                 pos_logits, neg_logits = model(ss, seq, pos, neg)
-            elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus' or args.model == 'LightSANs':
+            elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus' or args.model == 'LightSANs' or args.model == 'LightSANs_Repeat':
                 pos_logits, neg_logits = model(ss, seq, repeat, pos, neg)
             pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
@@ -232,6 +235,9 @@ if __name__ == '__main__':
             elif args.model == 'LightSANs':
                 fname = 'LightSANs_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'LightSANs_Repeat':
+                fname = 'LightSANs_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
@@ -268,6 +274,9 @@ if __name__ == '__main__':
                 fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'LightSANs':
                 fname = 'LightSANs.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'LightSANs_Repeat':
+                fname = 'LightSANs_Repeat.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
