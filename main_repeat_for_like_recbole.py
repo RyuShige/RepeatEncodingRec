@@ -11,7 +11,7 @@ from tqdm import tqdm
 from model_like_recbole import SASRec
 from sasrec_repeat_like_recbole import SASRec_Repeat
 from sasrec_repeat_plus_like_recbole import SASRec_RepeatPlus
-from sasrec_repeat_out import SASRec_Repeat_Out
+from light_sans import LightSANs
 from utils import *
 
 def str2bool(s):
@@ -111,8 +111,8 @@ if __name__ == '__main__':
         model = SASRec_Repeat(sessionsetnum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
     elif args.model == 'SASRec_RepeatPlus':
         model = SASRec_RepeatPlus(sessionsetnum, itemnum, repeatnum, args).to(args.device)
-    elif args.model == 'SASRec_Repeat_Out':
-        model = SASRec_Repeat_Out(sessionsetnum, itemnum, repeatnum, args).to(args.device)
+    elif args.model == 'LightSANs':
+        model = LightSANs(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     
     for name, param in model.named_parameters():
         try:
@@ -169,7 +169,7 @@ if __name__ == '__main__':
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
                 pos_logits, neg_logits = model(ss, seq, pos, neg)
-            elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus' or args.model == 'SASRec_Repeat_Out':
+            elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus' or args.model == 'LightSANs':
                 pos_logits, neg_logits = model(ss, seq, repeat, pos, neg)
             pos_labels, neg_labels = torch.ones(pos_logits.shape, device=args.device), torch.zeros(neg_logits.shape, device=args.device)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
@@ -196,8 +196,8 @@ if __name__ == '__main__':
             t_valid = evaluate(model, args.model, dataset, args, mode='valid', repeat_data=repeat_data)
             
             # early stopping
-            if early_stop < t_valid[4]:
-                early_stop = t_valid[4] # MRR@20
+            if early_stop < t_valid[6]:
+                early_stop = t_valid[6] # MRR@20
                 best_model_params = model.state_dict().copy()  # 最高のモデルのパラメータを一時的に保存
                 best_epoch = epoch
                 early_count = 0
@@ -229,8 +229,8 @@ if __name__ == '__main__':
             elif args.model == 'SASRec_RepeatPlus':
                 fname = 'SASRec_RepeatPlus_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'SASRec_Repeat_Out':
-                fname = 'SASRec_Repeat_Out_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+            elif args.model == 'LightSANs':
+                fname = 'LightSANs_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
@@ -266,8 +266,8 @@ if __name__ == '__main__':
             elif args.model == 'SASRec_RepeatPlus':
                 fname = 'SASRec_RepeatPlus.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'SASRec_Repeat_Out':
-                fname = 'SASRec_Repeat_Out.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+            elif args.model == 'LightSANs':
+                fname = 'LightSANs.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
