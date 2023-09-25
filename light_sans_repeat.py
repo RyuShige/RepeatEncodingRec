@@ -4,7 +4,7 @@ lightSANsのコードを参考にするために、recboleのSASRecの実装+BCE
 
 import numpy as np
 import torch
-from layer import LightTransformerEncoder
+from layer import LightRepeatTransformerEncoder
 
 class PointWiseFeedForward(torch.nn.Module):
     def __init__(self, hidden_units, dropout_rate):
@@ -54,7 +54,7 @@ class LightSANs_Repeat(torch.nn.Module):
         self.layer_norm_eps = 1e-12
         self.initializer_range = 0.02
         
-        self.trm_encoder = LightTransformerEncoder(
+        self.trm_encoder = LightRepeatTransformerEncoder(
             n_layers=args.num_blocks,
             n_heads=args.num_heads,
             k_interests=self.k_interests,
@@ -88,6 +88,7 @@ class LightSANs_Repeat(torch.nn.Module):
             item_seq.size(1), dtype=torch.long, device=item_seq.device
         )
         position_embedding = self.pos_emb(position_ids)
+        position_embedding = position_embedding.unsqueeze(0).repeat(item_seq.size(0), 1, 1)
         repeat_embedding = self.repeat_emb(repeat_seq)
         item_emb = self.item_emb(item_seq)
         return item_emb, position_embedding, repeat_embedding
