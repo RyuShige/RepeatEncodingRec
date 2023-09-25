@@ -129,12 +129,23 @@ class LightSANs_Repeat(torch.nn.Module):
         log_seqs = torch.LongTensor(log_seqs).to(self.dev)
         log_reps = torch.LongTensor(log_reps).to(self.dev)
         item_emb, position_embedding, repeat_embedding = self.embedding_layer(log_seqs, log_reps)
-        repeat_position_emb = repeat_embedding + position_embedding
+
+        # repeatとposを足してdpeに入れるパターン
+        # repeat_position_emb = repeat_embedding + position_embedding
+        
+        # repeat+itemのパターン
+        repeat_item_emb = repeat_embedding + item_emb
+        item_emb += position_embedding
+
         item_emb = self.layernorm(item_emb)
         item_emb = self.emb_dropout(item_emb)
 
+        # trm_output = self.trm_encoder(
+        #     item_emb, repeat_position_emb, output_all_encoded_layers=True
+        # )
+        
         trm_output = self.trm_encoder(
-            item_emb, repeat_position_emb, output_all_encoded_layers=True
+            item_emb, repeat_item_emb, output_all_encoded_layers=True
         )
         output = trm_output[-1]
         return output  # [B I H]
