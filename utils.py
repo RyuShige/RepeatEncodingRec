@@ -266,7 +266,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             for i in range(len(item_idx)):
                 if model_name == 'SASRec':
                     predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], items]]) # -をつけることでargsortを降順にできる（本来は昇順）# searchの場合はitemsは全てのアイテム
-                elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='SASRec_Repeat_Out':
+                elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='SASRec_Repeat_Out' or model_name=='LightSANs' or model_name=='LightSANs_Repeat':
                     predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], items]])
                 predictions = predictions[0].tolist()
                 # トップアイテムを取得
