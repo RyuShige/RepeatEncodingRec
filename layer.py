@@ -568,18 +568,18 @@ class LightRepeatMultiHeadAttention(nn.Module):
             mixed_value_layer
         )
 
-        # decoupled position encoding: relation of positions
-        # value_layer_pos = self.transpose_for_scores(mixed_value_layer)
-        value_layer_pos = self.transpose_for_scores(self.pos_k_linear(pos_emb))
-        pos_emb = self.pos_ln(pos_emb)
-        pos_query_layer = (
-            self.transpose_for_scores(self.pos_q_linear(pos_emb))
-        )
-        pos_key_layer = self.transpose_for_scores(self.pos_k_linear(pos_emb))
+        # # decoupled position encoding: relation of positions
+        # # value_layer_pos = self.transpose_for_scores(mixed_value_layer)
+        # value_layer_pos = self.transpose_for_scores(self.pos_k_linear(pos_emb))
+        # pos_emb = self.pos_ln(pos_emb)
+        # pos_query_layer = (
+        #     self.transpose_for_scores(self.pos_q_linear(pos_emb))
+        # )
+        # pos_key_layer = self.transpose_for_scores(self.pos_k_linear(pos_emb))
 
         # concat,plus,itemintegration
-        query_layer += pos_query_layer
-        key_layer += pos_key_layer
+        # query_layer += pos_query_layer
+        # key_layer += pos_key_layer
         # value_layer += value_layer_pos
 
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
@@ -589,6 +589,16 @@ class LightRepeatMultiHeadAttention(nn.Module):
         attention_probs = nn.Softmax(dim=-2)(attention_scores)
         attention_probs = self.attn_dropout(attention_probs)
         context_layer_item = torch.matmul(attention_probs, value_layer)
+
+        # repeatのkeyとitemのqでattention scoreを出す
+        pos_query_layer = self.transpose_for_scores(mixed_query_layer)
+        value_layer_pos = self.transpose_for_scores(mixed_value_layer)
+        pos_emb = self.pos_ln(pos_emb)
+        pos_key_layer = self.transpose_for_scores(self.pos_k_linear(pos_emb))
+        item_repeat_attention = torch.matmul(pos_query_layer, pos_key_layer.transpose(-1, -2))
+        item_repeat_attention = item_repeat_attention / math.sqrt(self.attention_head_size)
+        item_repeat_attention = nn.Softmax(dim=-2)(item_repeat_attention)
+        context_layer_rep = torch.matmul(item_repeat_attention, value_layer_pos)
 
         # # decoupled position encoding: relation of positions
         # value_layer_pos = self.transpose_for_scores(mixed_value_layer)
@@ -604,7 +614,7 @@ class LightRepeatMultiHeadAttention(nn.Module):
         # context_layer_pos = torch.matmul(abs_pos_bias, value_layer_pos)
 
         # context_layer = context_layer_item + context_layer_pos
-        context_layer = context_layer_item
+        context_layer = context_layer_item + context_layer_rep
 
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
