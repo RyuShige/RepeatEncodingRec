@@ -132,28 +132,32 @@ class LightSANs_Repeat(torch.nn.Module):
 
         # repeatとposを足してdpeに入れるパターン
         # repeat_position_emb = repeat_embedding + position_embedding
-        
-        # repeat+itemのパターン
-        # repeat_item_emb = repeat_embedding + item_emb
-        # item_emb += position_embedding
-
-        # item+pos, repeatのパターン
-        item_emb += position_embedding
-
-        item_emb = self.layernorm(item_emb)
-        item_emb = self.emb_dropout(item_emb)
-
         # trm_output = self.trm_encoder(
         #     item_emb, repeat_position_emb, output_all_encoded_layers=True
         # )
-        
+                
+        # repeat+itemのパターン
+        # repeat_item_emb = repeat_embedding + item_emb
+        # item_emb += position_embedding
         # trm_output = self.trm_encoder(
         #     item_emb, repeat_item_emb, output_all_encoded_layers=True
         # )
 
+        # item+pos, repeatのパターン
+        item_emb += position_embedding
+        item_emb = self.layernorm(item_emb)
+        item_emb = self.emb_dropout(item_emb)
+
         trm_output = self.trm_encoder(
             item_emb, repeat_embedding, output_all_encoded_layers=True
         )
+
+        # item,rep+pos。vはitemのみ
+        repeat_position_emb = repeat_embedding + position_embedding
+        trm_output = self.trm_encoder(
+            item_emb, repeat_position_emb, output_all_encoded_layers=True
+        )
+
 
         output = trm_output[-1]
         return output  # [B I H]

@@ -580,7 +580,7 @@ class LightRepeatMultiHeadAttention(nn.Module):
         # concat,plus,itemintegration
         query_layer += pos_query_layer
         key_layer += pos_key_layer
-        value_layer += value_layer_pos
+        # value_layer += value_layer_pos
 
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
