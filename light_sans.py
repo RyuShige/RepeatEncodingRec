@@ -38,7 +38,7 @@ class LightSANs(torch.nn.Module):
         self.maxlen = args.maxlen
         self.batch_size = args.batch_size
         self.re_enc = args.re_enc
-        self.k_interests = 5 # recboleの初期値
+        self.k_interests = 50 # recboleの初期値
 
 
         # TODO: loss += args.l2_emb for regularizing embedding vectors during training
