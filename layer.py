@@ -559,9 +559,13 @@ class LightRepeatMultiHeadAttention(nn.Module):
 
         # low-rank decomposed self-attention: relation of items
         query_layer = self.transpose_for_scores(mixed_query_layer)
-        key_layer = self.transpose_for_scores(self.attpooling_key(mixed_key_layer))
+        # key_layer = self.transpose_for_scores(self.attpooling_key(mixed_key_layer))
+        # value_layer = self.transpose_for_scores(
+        #     self.attpooling_value(mixed_value_layer)
+        # )
+        key_layer = self.transpose_for_scores(mixed_key_layer)
         value_layer = self.transpose_for_scores(
-            self.attpooling_value(mixed_value_layer)
+            mixed_value_layer
         )
 
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
@@ -579,11 +583,10 @@ class LightRepeatMultiHeadAttention(nn.Module):
             self.transpose_for_scores(self.pos_q_linear(pos_emb)) * self.pos_scaling
         )
         pos_key_layer = self.transpose_for_scores(self.pos_k_linear(pos_emb))
-
         abs_pos_bias = torch.matmul(pos_query_layer, pos_key_layer.transpose(-1, -2))
+
         abs_pos_bias = abs_pos_bias / math.sqrt(self.attention_head_size)
         abs_pos_bias = nn.Softmax(dim=-2)(abs_pos_bias)
-
         context_layer_pos = torch.matmul(abs_pos_bias, value_layer_pos)
 
         context_layer = context_layer_item + context_layer_pos
