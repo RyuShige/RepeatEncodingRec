@@ -248,7 +248,7 @@ def evaluate(model, model_name, dataset, args, mode):
 
         if model_name == 'SASRec':
             predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]]) # -をつけることでargsortを降順にできる（本来は昇順）
-        elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus':
+        elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='LightSANs_Repeat':
             predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
         # predictions = predictions[0]  # - for 1st argsort DESC
         # ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得

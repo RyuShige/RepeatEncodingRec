@@ -8,6 +8,7 @@ from tqdm import tqdm
 from model_recbole import SASRec
 from sasrec_repeat_recbole import SASRec_Repeat
 from sasrec_repeat_plus_recbole import SASRec_RepeatPlus
+from light_sans_repeat_ce import LightSANs_Repeat
 from utils_recbole import *
 
 def str2bool(s):
@@ -37,6 +38,7 @@ parser.add_argument('--split', default='ratio', type=str)
 parser.add_argument('--wandb', default=False, type=str2bool)
 parser.add_argument('--data_type', default='lifetime', type=str)
 parser.add_argument('--re_enc', default=False, type=str2bool)
+parser.add_argument('--inner_size', default=256, type=int)
 
 args = parser.parse_args()
 if not os.path.isdir(args.dataset + '_' + args.train_dir):
@@ -66,7 +68,8 @@ if args.wandb:
             'state_dict_path': args.state_dict_path,
             'split': args.split,
             'data_type': args.data_type,
-            're_enc': args.re_enc
+            're_enc': args.re_enc,
+            'inner_size': args.inner_size
         }
         )
 
@@ -94,6 +97,8 @@ if __name__ == '__main__':
         model = SASRec_Repeat(sessionsetnum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
     elif args.model == 'SASRec_RepeatPlus':
         model = SASRec_RepeatPlus(sessionsetnum, itemnum, repeatnum, args).to(args.device)
+    elif args.model == 'LightSANs_Repeat':
+        model = LightSANs_Repeat(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     
     for name, param in model.named_parameters():
         try:
@@ -150,7 +155,7 @@ if __name__ == '__main__':
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
                 logits = model(ss, seq, pos, neg)
-            elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus':
+            elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus' or args.model == 'LightSANs_Repeat':
                 logits = model(ss, seq, repeat, pos, neg)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()
@@ -168,8 +173,7 @@ if __name__ == '__main__':
             wandb.log({"epoch": epoch, "loss": epoch_loss})
         total_loss = 0 # for next epoch
 
-    
-        if epoch % 10 == 0:
+        if epoch % 20 == 0:
             model.eval()
             t1 = time.time() - t0
             T += t1
@@ -210,6 +214,9 @@ if __name__ == '__main__':
             elif args.model == 'SASRec_RepeatPlus':
                 fname = 'SASRec_RepeatPlus_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'LightSANs_Repeat':
+                fname = 'LightSANs_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
@@ -243,7 +250,10 @@ if __name__ == '__main__':
             elif args.model == 'SASRec_RepeatPlus':
                 fname = 'SASRec_RepeatPlus.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            torch.save(model.state_dict(), os.path.join(folder, fname))
+            elif args.model == 'LightSANs_Repeat':
+                fname = 'LightSANs_Repeat.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            torch.save(best_model_params, os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
             best_model_path = os.path.join(folder, fname)
