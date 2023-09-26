@@ -8,6 +8,7 @@ from tqdm import tqdm
 from model_recbole import SASRec
 from sasrec_repeat_recbole import SASRec_Repeat
 from sasrec_repeat_plus_recbole import SASRec_RepeatPlus
+from light_sans_ce import LightSANs
 from light_sans_repeat_ce import LightSANs_Repeat
 from utils_recbole import *
 
@@ -97,6 +98,8 @@ if __name__ == '__main__':
         model = SASRec_Repeat(sessionsetnum, itemnum, repeatnum, args).to(args.device) # no ReLU activation in original SASRec implementation?
     elif args.model == 'SASRec_RepeatPlus':
         model = SASRec_RepeatPlus(sessionsetnum, itemnum, repeatnum, args).to(args.device)
+    elif args.model == 'LightSANs':
+        model = LightSANs(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     elif args.model == 'LightSANs_Repeat':
         model = LightSANs_Repeat(sessionsetnum, itemnum, repeatnum, args).to(args.device)
     
@@ -155,7 +158,7 @@ if __name__ == '__main__':
             # u, seq, repeat, pos, neg = expand_samples(u, seq, repeat, pos, neg, args.maxlen)
             if args.model == 'SASRec':
                 logits = model(ss, seq, pos, neg)
-            elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus' or args.model == 'LightSANs_Repeat':
+            elif args.model == 'SASRec_Repeat' or args.model == 'SASRec_RepeatPlus' or args.model == 'LightSANs_Repeat' or args.model == 'LightSANs':
                 logits = model(ss, seq, repeat, pos, neg)
             # print("\neye ball check raw_logits:"); print(pos_logits); print(neg_logits) # check pos_logits > 0, neg_logits < 0
             adam_optimizer.zero_grad()
@@ -201,7 +204,7 @@ if __name__ == '__main__':
                 wandb.log({"epoch": epoch, "time": T, "valid_Precision@10": t_valid[0], "valid_Precision@20": t_valid[1], "valid_Rcall@10": t_valid[2], "valid_Rcall@20": t_valid[3], "valid_MRR@10": t_valid[4], "valid_MRR@20": t_valid[5], "valid_NDCG@10": t_valid[6], "valid_NDCG@20": t_valid[7], "valid_HR@10": t_valid[8], "valid_HR@20": t_valid[9]})
             
         
-        if early_count == 3:
+        if early_count == 5:
             print('early stop at epoch {}'.format(epoch))
             print('testing')
             folder = args.dataset + '_' + args.train_dir
@@ -216,6 +219,9 @@ if __name__ == '__main__':
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'LightSANs_Repeat':
                 fname = 'LightSANs_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'LightSANs':
+                fname = 'LightSANs_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 
@@ -252,6 +258,9 @@ if __name__ == '__main__':
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             elif args.model == 'LightSANs_Repeat':
                 fname = 'LightSANs_Repeat.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+            elif args.model == 'LightSANs':
+                fname = 'LightSANs.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(args.num_epochs, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
             torch.save(best_model_params, os.path.join(folder, fname))
 

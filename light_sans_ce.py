@@ -124,7 +124,12 @@ class LightSANs(torch.nn.Module):
         return re
 
     def log2feats(self, log_seqs, log_reps, pred=False):
+        # self.batch_size個のnumpy配列を作成
+        item_seq_len = np.full(log_seqs.shape[0], self.maxlen)
+        # tenosrに変換
+        item_seq_len = torch.LongTensor(item_seq_len).to(self.dev)
         log_seqs = torch.LongTensor(log_seqs).to(self.dev)
+        # log_reps = torch.LongTensor(log_reps).to(self.dev)
         item_emb, position_embedding = self.embedding_layer(log_seqs)
         item_emb = self.layernorm(item_emb)
         item_emb = self.emb_dropout(item_emb)
@@ -133,24 +138,21 @@ class LightSANs(torch.nn.Module):
             item_emb, position_embedding, output_all_encoded_layers=True
         )
         output = trm_output[-1]
+        output = self.gather_indexes(output, item_seq_len - 1)
         return output  # [B I H]
 
     def forward(self, user_ids, log_seqs, log_reps, pos_seqs, neg_seqs): # for training
         log_feats = self.log2feats(log_seqs, log_reps) # user_ids hasn't been used yet
 
-        pos_embs = self.item_emb(torch.LongTensor(pos_seqs).to(self.dev)) # [B, I, H]
-        neg_embs = self.item_emb(torch.LongTensor(neg_seqs).to(self.dev))
-
-        pos_logits = (log_feats * pos_embs).sum(dim=-1) # ある時刻のtransforerの出力とある時刻の正解アイテムのembeddingの内積（d次元のベクトル同士の内積）
-        neg_logits = (log_feats * neg_embs).sum(dim=-1)
-
-        return pos_logits, neg_logits # [B, I(num_items)]
+        test_item_emb = self.item_emb.weight # モデルにおける各itemのembedding
+        logits = torch.matmul(log_feats, test_item_emb.transpose(0, 1)) # 与えられた系列と各アイテムとの類似度
+        return logits # [B, I(num_items)]
     
     def predict(self, user_ids, log_seqs, log_reps, item_indices): # for inference
-        log_feats = self.log2feats(log_seqs, log_reps) # [B Seq H]
-        final_feat = log_feats[:, -1, :] # only use last QKV classifier, a waste # [1 H] 最後のアイテムの出力だけを取ってくる
-        item_embs = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # [I H]
-        logits = item_embs.matmul(final_feat.unsqueeze(-1)).squeeze(-1) # [1 I]
-        # preds = self.pos_sigmoid(logits) # rank same item list for different users
+        log_feats = self.log2feats(log_seqs, log_reps, pred=True) # user_ids hasn't been used yet
 
-        return logits # preds # (U, I)
+        test_item_emb = self.item_emb(torch.LongTensor(item_indices).to(self.dev)) # 指定したアイテムの学習済みembeddingを取得
+        logits = torch.matmul(log_feats, test_item_emb.transpose(0, 1))
+        # logits = torch.matmul(test_item_emb, log_feats).sum(dim=1)
+
+        return logits
