@@ -310,11 +310,10 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
 
             if model_name == 'SASRec':
                 predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]]) # -をつけることでargsortを降順にできる（本来は昇順）
-            elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='LightSANs' or model_name=='LightSANs_Repeat':
+            elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='LightSANs' or args.model == 'LightSANs_simple_R' or model_name=='LightSANs_Repeat':
                 predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
             predictions = predictions[0]  # - for 1st argsort DESC
             ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
-        
         # ranksからrep_idxに対応するアイテムだけを取得
         ranks_rep = np.array(ranks)[rep_idx]
 
@@ -323,19 +322,28 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         valid_item_rep += correct_len_rep
 
         # R-Precision
+        c = 0
         for i, r in enumerate(ranks):
             if r < correct_len:
-                R_PRECITION += 1
+                # R_PRECITION += 1 # 全アイテム数で割る場合だが、有効シークエンス数で割ってもいいと思う（recallはそうだし、分母もシークエンス毎に異なる）
+                c += 1
+        R_PRECITION += c / correct_len
         
         # R-Precision-Repeat
+        c = 0
         for i, r in enumerate(ranks_rep):
             if r < correct_len_rep:
                 R_PRECITION_REP += 1
+                # c += 1
+        # R_PRECITION_REP += c / correct_len_rep
 
         # Next HR
+        c = 0
         for i, r in enumerate(ranks):
             if r == i:
-                NEXT_HR += 1
+                # NEXT_HR += 1
+                c += 1
+        NEXT_HR += c / correct_len
 
         # 10未満のアイテム数をカウント
         c = 0
@@ -401,5 +409,6 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         #     print('.', end="")
         #     sys.stdout.flush()
 
+
     # return PRECITION_10 / valid_user, PRECITION_20 / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
-    return R_PRECITION / valid_item, R_PRECITION_REP / valid_item_rep, NEXT_HR / valid_item, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user
+    return R_PRECITION / valid_user, R_PRECITION_REP / valid_item_rep, NEXT_HR / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user
