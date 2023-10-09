@@ -47,6 +47,7 @@ parser.add_argument('--data_type', default='lifetime', type=str)
 parser.add_argument('--ffn', default=False, type=str2bool)
 parser.add_argument('--search', default=False, type=str2bool)
 parser.add_argument('--scale', default=True, type=str2bool)
+parser.add_argument('--early_stop', default=True, type=str2bool)
 
 args = parser.parse_args()
 if not os.path.isdir(args.dataset + '_' + args.train_dir):
@@ -81,7 +82,8 @@ if args.wandb:
             'ffn': args.ffn,
             'search': args.search,
             'scale': args.scale,
-            'inner_size': args.inner_size
+            'inner_size': args.inner_size,
+            'early_stop': args.early_stop
         }
         )
 
@@ -199,13 +201,14 @@ if __name__ == '__main__':
             t_valid = evaluate(model, args.model, dataset, args, mode='valid', repeat_data=repeat_data)
             
             # early stopping
-            if early_stop < t_valid[6]:
-                early_stop = t_valid[6] # MRR@20
-                best_model_params = model.state_dict().copy()  # 最高のモデルのパラメータを一時的に保存
-                best_epoch = epoch
-                early_count = 0
-            else:
-                early_count += 1
+            if args.early_stop:
+                if early_stop < t_valid[6]:
+                    early_stop = t_valid[6] # MRR@20
+                    best_model_params = model.state_dict().copy()  # 最高のモデルのパラメータを一時的に保存
+                    best_epoch = epoch
+                    early_count = 0
+                else:
+                    early_count += 1
             
             print('epoch:%d, time: %f(s), valid (R-Precision: %.4f, R-Precision-Rep: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
                     % (epoch, T, t_valid[0], t_valid[1], t_valid[2],  t_valid[3], t_valid[4], t_valid[5], t_valid[6], t_valid[7], t_valid[8]))
@@ -218,48 +221,48 @@ if __name__ == '__main__':
             if args.wandb:
                 wandb.log({"epoch": epoch, "time": T, "valid_R-Precision": t_valid[0], "valid_R-Precision-Rep": t_valid[1], "valid_Next-HR": t_valid[2], "valid_Rcall@10": t_valid[3], "valid_Rcall@20": t_valid[4], "valid_MRR@10": t_valid[5], "valid_MRR@20": t_valid[6], "valid_NDCG@10": t_valid[7], "valid_NDCG@20": t_valid[8]})
             
-        
-        if early_count == 3:
-            print('early stop at epoch {}'.format(epoch))
-            print('testing')
-            folder = args.dataset + '_' + args.train_dir
-            if args.model == 'SASRec':
-                fname = 'SASRec_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'SASRec_Repeat':
-                fname = 'SASRec_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'SASRec_RepeatPlus':
-                fname = 'SASRec_RepeatPlus_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'LightSANs':
-                fname = 'LightSANs_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            elif args.model == 'LightSANs_Repeat':
-                fname = 'LightSANs_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
-                fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            torch.save(best_model_params, os.path.join(folder, fname))
+        if args.early_stop:
+            if early_count == 3:
+                print('early stop at epoch {}'.format(epoch))
+                print('testing')
+                folder = args.dataset + '_' + args.train_dir
+                if args.model == 'SASRec':
+                    fname = 'SASRec_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                    fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+                elif args.model == 'SASRec_Repeat':
+                    fname = 'SASRec_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                    fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+                elif args.model == 'SASRec_RepeatPlus':
+                    fname = 'SASRec_RepeatPlus_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                    fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+                elif args.model == 'LightSANs':
+                    fname = 'LightSANs_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                    fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+                elif args.model == 'LightSANs_Repeat':
+                    fname = 'LightSANs_Repeat_BestModel.MRR={}.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
+                    fname = fname.format(early_stop, best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
+                torch.save(best_model_params, os.path.join(folder, fname))
 
-            # 最も評価指標が高かったエポックのモデルのパスを指定します。
-            best_model_path = os.path.join(folder, fname)
+                # 最も評価指標が高かったエポックのモデルのパスを指定します。
+                best_model_path = os.path.join(folder, fname)
 
-            # モデルの重みをロードします。
-            model.load_state_dict(torch.load(best_model_path, map_location=torch.device(args.device)))
+                # モデルの重みをロードします。
+                model.load_state_dict(torch.load(best_model_path, map_location=torch.device(args.device)))
 
-            # ロードした重みを用いてテストの評価を行います。
-            repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
-            t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
-            print('epoch:%d, time: %f(s), test (R-Precision: %.4f, R-Precision-Rep: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
-                    % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8]))
-            f.write(str(t_test) + '\n')
-            f.flush()
-        
-            if args.wandb:
-                wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_R-Precision-Rep": t_test[1], "test_Next-HR": t_test[2], "test_Rcall@10": t_test[3], "test_Rcall@20": t_test[4], "test_MRR@10": t_test[5], "test_MRR@20": t_test[6], "test_NDCG@10": t_test[7], "test_NDCG@20": t_test[8]})
-
+                # ロードした重みを用いてテストの評価を行います。
+                repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_test.csv')
+                t_test = evaluate(model, args.model, dataset, args, mode='test', repeat_data=repeat_data)
+                print('epoch:%d, time: %f(s), test (R-Precision: %.4f, R-Precision-Rep: %.4f, Next-HR: %4f, Rcall@10: %.4f, Rcall@20: %.4f, MRR@10: %.4f, MRR@20: %.4f, NDCG@10: %.4f, NDCG@20: %.4f))'
+                        % (epoch, T, t_test[0], t_test[1], t_test[2],  t_test[3], t_test[4], t_test[5], t_test[6], t_test[7], t_test[8]))
+                f.write(str(t_test) + '\n')
+                f.flush()
             
-            break
-    
+                if args.wandb:
+                    wandb.log({"best_epoch": best_epoch, "time": T, "test_R-Precision": t_test[0], "test_R-Precision-Rep": t_test[1], "test_Next-HR": t_test[2], "test_Rcall@10": t_test[3], "test_Rcall@20": t_test[4], "test_MRR@10": t_test[5], "test_MRR@20": t_test[6], "test_NDCG@10": t_test[7], "test_NDCG@20": t_test[8]})
+
+                
+                break
+        
         if epoch == args.num_epochs:
             print('testing')
             folder = args.dataset + '_' + args.train_dir
@@ -278,7 +281,10 @@ if __name__ == '__main__':
             elif args.model == 'LightSANs_Repeat':
                 fname = 'LightSANs_Repeat.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            torch.save(best_model_params, os.path.join(folder, fname))
+            if args.ealry_stop:
+                torch.save(best_model_params, os.path.join(folder, fname))
+            else:
+                torch.save(model.state_dict(), os.path.join(folder, fname))
 
             # 最も評価指標が高かったエポックのモデルのパスを指定します。
             best_model_path = os.path.join(folder, fname)
