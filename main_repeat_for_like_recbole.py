@@ -89,6 +89,19 @@ if args.wandb:
         )
 
 if __name__ == '__main__':
+    # シード値の固定
+    # Python random
+    seed = 42
+    random.seed(seed)
+    # Numpy
+    np.random.seed(seed)
+    # Pytorch
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.use_deterministic_algorithms = True
+    
     # global dataset
     dataset = data_partition(args.dataset, args.data_type)
 
