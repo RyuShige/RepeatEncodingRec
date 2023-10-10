@@ -290,7 +290,8 @@ if __name__ == '__main__':
             elif args.model == 'LightSANs_Repeat':
                 fname = 'LightSANs_Repeat.epoch={}.lr={}.layer={}.head={}.hidden={}.maxlen={}.pth'
                 fname = fname.format(best_epoch, args.lr, args.num_blocks, args.num_heads, args.hidden_units, args.maxlen)
-            if args.ealry_stop:
+            
+            if args.early_stop:
                 torch.save(best_model_params, os.path.join(folder, fname))
             else:
                 torch.save(model.state_dict(), os.path.join(folder, fname))
