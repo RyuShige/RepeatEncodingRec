@@ -255,6 +255,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             rep_idx = np.where(rep_idx > 1)[0]
 
         correct_len = len(item_idx)
+        if correct_len == 0: continue
         correct_len_rep = len(rep_idx)
         
         # item_indexが20以下の場合、最後の予測の2位以下のアイテムで補完する（予測アイテム内の繰り返しは排除）
