@@ -204,9 +204,55 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
     NDCG_20 = 0.0
     HT_10 = 0.0
     HT_20 = 0.0
+    r_precition = 0.0
+    next_hr = 0.0
+    recall_10 = 0.0
+    recall_20 = 0.0
+    mrr_10 = 0.0
+    mrr_20 = 0.0
+    ndcg_10 = 0.0
+    ndcg_20 = 0.0
+
     valid_user = 0.0
     valid_item = 0.0
     valid_item_rep = 0.0
+    result = {}
+
+    if mode == 'test' and model_name == 'SASRec':
+        result = {
+            'ss': [],
+            'u': [],
+            'seq': [],
+            'ranks': [],
+            'item_idx': [],
+            'top_items': [],
+            'R_PRECITION': [],
+            'NEXT_HR': [],
+            'RECALL_10': [],
+            'RECALL_20': [],
+            'MRR_10': [],
+            'MRR_20': [],
+            'NDCG_10': [],
+            'NDCG_20': []
+        }
+    elif mode == 'test' and (model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='SASRec_Repeat_Out' or model_name=='LightSANs' or model_name=='LightSANs_Repeat'): 
+        result = {
+            'ss': [],
+            'u': [],
+            'seq': [],
+            'ranks': [],
+            'rep': [],
+            'item_idx': [],
+            'top_items': [],
+            'R_PRECITION': [],
+            'NEXT_HR': [],
+            'RECALL_10': [],
+            'RECALL_20': [],
+            'MRR_10': [],
+            'MRR_20': [],
+            'NDCG_10': [],
+            'NDCG_20': []
+        }
 
     session_sets = list(session_set_valid.keys()) if mode == 'valid' else list(session_set_test.keys())
     for ss in tqdm(session_sets):
@@ -231,8 +277,8 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             for i, r in zip(reversed(input_seq), reversed(input_rep)):
                 seq[idx] = i
                 rep[idx] = r
-                idx -= 1
                 if idx == 0: break
+                idx -= 1
             item_idx = session_set_valid[ss][max_s+1:]
             rep_idx = np.array(repeat_valid[ss][max_s+1:])
             # rep_idxが2以上のindexを取得
@@ -247,8 +293,8 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             for i, r in zip(reversed(input_seq), reversed(input_rep)):
                 seq[idx] = i
                 rep[idx] = r
-                idx -= 1
                 if idx == 0: break
+                idx -= 1
             item_idx = session_set_test[ss][max_s+1:]
             rep_idx = np.array(repeat_test[ss][max_s+1:])
             # rep_idxが2以上のindexを取得
@@ -258,7 +304,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         if correct_len == 0: continue
         correct_len_rep = len(rep_idx)
         
-        # item_indexが20以下の場合、最後の予測の2位以下のアイテムで補完する（予測アイテム内の繰り返しは排除）
+        # searchの場合、item_indexが20以下の場合、最後の予測の2位以下のアイテムで補完する（予測アイテム内の繰り返しは排除）
         if args.search and mode == 'test':
             # itemnum個の配列を作成(全アイテム)
             items = np.arange(1, itemnum + 1)
@@ -306,15 +352,23 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             # itemnum個の配列を作成(全アイテム)
             t = np.arange(1, itemnum + 1)
             # item_idxに含まれないアイテム
-            t = np.setdiff1d(t, item_idx)  
-            item_idx.extend(t)
+            x = np.setdiff1d(t, item_idx)  
+            item_idx.extend(x)
 
             if model_name == 'SASRec':
                 predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], item_idx]]) # -をつけることでargsortを降順にできる（本来は昇順）
             elif model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='LightSANs' or args.model == 'LightSANs_simple_R' or model_name=='LightSANs_Repeat':
                 predictions = -model.predict(*[np.array(l) for l in [[ss], [seq], [rep], item_idx]])
             predictions = predictions[0]  # - for 1st argsort DESC
-            ranks = predictions.argsort().argsort()[0:correct_len].tolist() # 正解データのランクを取得
+            all_ranks = predictions.argsort(stable=True).argsort(stable=True).tolist() # 正解データのランクを取得, stableにすることで同値のソートを出現順にする
+            ranks = predictions.argsort(stable=True).argsort(stable=True)[0:correct_len].tolist() # 正解データのランクを取得
+
+            # item_idx と ranks をペアにして並べ替え
+            item_rank_pairs = sorted(zip(item_idx, all_ranks), key=lambda x: x[1])
+            # 新しい順序で item_idx を取得
+            top_items = [item for item, rank in item_rank_pairs]
+            top_items = top_items[:20]
+
         # ranksからrep_idxに対応するアイテムだけを取得
         ranks_rep = np.array(ranks)[rep_idx]
 
@@ -322,13 +376,23 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         valid_item += correct_len
         valid_item_rep += correct_len_rep
 
+        r_precition = 0.0
+        next_hr = 0.0
+        recall_10 = 0.0
+        recall_20 = 0.0
+        mrr_10 = 0.0
+        mrr_20 = 0.0
+        ndcg_10 = 0.0
+        ndcg_20 = 0.0
+
         # R-Precision
         c = 0
         for i, r in enumerate(ranks):
             if r < correct_len:
                 # R_PRECITION += 1 # 全アイテム数で割る場合だが、有効シークエンス数で割ってもいいと思う（recallはそうだし、分母もシークエンス毎に異なる）
                 c += 1
-        R_PRECITION += c / correct_len
+        r_precition = c / correct_len
+        R_PRECITION += r_precition
         
         # R-Precision-Repeat
         c = 0
@@ -344,7 +408,8 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             if r == i:
                 # NEXT_HR += 1
                 c += 1
-        NEXT_HR += c / correct_len
+        next_hr = c / correct_len
+        NEXT_HR += next_hr
 
         # 10未満のアイテム数をカウント
         c = 0
@@ -362,16 +427,19 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 if r < top:
                     top = r
         PRECITION_10 += c / 10
-        RECALL_10 += c / correct_len
+        recall_10 = c / correct_len
+        RECALL_10 += recall_10
         HT_10 += h
         if top < 20:
-            MRR_10 += 1.0 / (top + 1)
+            mrr_10 = 1.0 / (top + 1)
+            MRR_10 += mrr_10
         dcg_p = 1
         for i in range(correct_len):
             if i == 0:
                 continue
             dcg_p += 1 / np.log2(i + 1)
-        NDCG_10 += dcg / dcg_p
+        ndcg_10 = dcg / dcg_p
+        NDCG_10 += ndcg_10
 
         
         # 20未満のアイテム数をカウント
@@ -390,16 +458,19 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                     top = r
 
         PRECITION_20 += c / 20
-        RECALL_20 += c / correct_len
+        recall_20 = c / correct_len
+        RECALL_20 += recall_20
         HT_20 += h
         if top < 20:
-            MRR_20 += 1.0 / (top + 1)
+            mrr_20 = 1.0 / (top + 1)
+            MRR_20 += mrr_20
         dcg_p = 1
         for i in range(correct_len):
             if i == 0:
                 continue
             dcg_p += 1 / np.log2(i + 1)
-        NDCG_20 += dcg / dcg_p
+        ndcg_20 = dcg / dcg_p
+        NDCG_20 += ndcg_20
 
         # if rank < 10:
         #     # RECALL += 
@@ -410,6 +481,41 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
         #     print('.', end="")
         #     sys.stdout.flush()
 
+        # resultに格納
+        if mode == 'test' and model_name == 'SASRec':
+            result['ss'].append(ss)
+            result['u'].append(u)
+            result['seq'].append(seq)
+            result['ranks'].append(ranks)
+            result['item_idx'].append(item_idx[:correct_len])
+            result['top_items'].append(top_items)
+            result['R_PRECITION'].append(r_precition)
+            result['NEXT_HR'].append(next_hr)
+            result['RECALL_10'].append(recall_10)
+            result['RECALL_20'].append(recall_20)
+            result['MRR_10'].append(mrr_10)
+            result['MRR_20'].append(mrr_20)
+            result['NDCG_10'].append(ndcg_10)
+            result['NDCG_20'].append(ndcg_20)
+        elif mode == 'test' and (model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='SASRec_Repeat_Out' or model_name=='LightSANs' or model_name=='LightSANs_Repeat'):
+            result['ss'].append(ss)
+            result['u'].append(u)
+            result['seq'].append(seq)
+            result['rep'].append(rep)
+            result['ranks'].append(ranks)
+            result['item_idx'].append(item_idx[:correct_len])
+            result['top_items'].append(top_items)
+            result['R_PRECITION'].append(r_precition)
+            result['NEXT_HR'].append(next_hr)
+            result['RECALL_10'].append(recall_10)
+            result['RECALL_20'].append(recall_20)
+            result['MRR_10'].append(mrr_10)
+            result['MRR_20'].append(mrr_20)
+            result['NDCG_10'].append(ndcg_10)
+            result['NDCG_20'].append(ndcg_20)
 
+    if mode == 'test':
+        result_df = pd.DataFrame(result)
+        result_df.to_csv('result/%s_result.csv' % (model_name), index=False)    
     # return PRECITION_10 / valid_user, PRECITION_20 / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user, HT_10 / valid_user, HT_20 / valid_user
     return R_PRECITION / valid_user, R_PRECITION_REP / valid_item_rep, NEXT_HR / valid_user, RECALL_10 / valid_user, RECALL_20 / valid_user, MRR_10 / valid_user, MRR_20 / valid_user, NDCG_10 / valid_user, NDCG_20 / valid_user

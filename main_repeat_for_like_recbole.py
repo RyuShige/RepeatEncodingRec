@@ -100,6 +100,7 @@ if __name__ == '__main__':
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
+        torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         torch.use_deterministic_algorithms = True
     
