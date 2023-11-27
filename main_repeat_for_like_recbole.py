@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
     # valid_repeatのデータベース
     repeat_data = None
-    if args.repeat_data:
+    if args.repeat_data and args.search:
         repeat_data = pd.read_csv(f'data/{args.data_type}/user_repeat_valid.csv')
 
     [u_valid, u_test, session_set_train, session_set_valid, session_set_test, session_train, session_valid, session_test, repeat_train, repeat_valid, repeat_test, repeatnum, itemnum, sessionnum, sessionsetnum, sessionset_valid_min, sessionset_test_min] = dataset

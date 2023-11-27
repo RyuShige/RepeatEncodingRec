@@ -7,6 +7,7 @@ import pandas as pd
 from collections import defaultdict
 from multiprocessing import Process, Queue
 from tqdm import tqdm
+from collections import OrderedDict
 
 # sampler for batch generation
 def random_neq(l, r, s):
@@ -204,6 +205,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
     NDCG_20 = 0.0
     HT_10 = 0.0
     HT_20 = 0.0
+    repeat_values = None
     r_precition = 0.0
     next_hr = 0.0
     recall_10 = 0.0
@@ -225,7 +227,9 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             'seq': [],
             'ranks': [],
             'item_idx': [],
+            'rep_gt': [],
             'top_items': [],
+            'top_items_rep': [],
             'R_PRECITION': [],
             'NEXT_HR': [],
             'RECALL_10': [],
@@ -243,7 +247,9 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             'ranks': [],
             'rep': [],
             'item_idx': [],
+            'rep_gt': [],
             'top_items': [],
+            'top_items_rep': [],
             'R_PRECITION': [],
             'NEXT_HR': [],
             'RECALL_10': [],
@@ -296,6 +302,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
                 if idx == 0: break
                 idx -= 1
             item_idx = session_set_test[ss][max_s+1:]
+            rep_gt = repeat_test[ss][max_s+1:]
             rep_idx = np.array(repeat_test[ss][max_s+1:])
             # rep_idxが2以上のindexを取得
             rep_idx = np.where(rep_idx > 1)[0]
@@ -367,7 +374,12 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             item_rank_pairs = sorted(zip(item_idx, all_ranks), key=lambda x: x[1])
             # 新しい順序で item_idx を取得
             top_items = [item for item, rank in item_rank_pairs]
+            top_items = list(OrderedDict.fromkeys(top_items))
             top_items = top_items[:20]
+
+        if args.repeat_data and mode=='test' and not args.search:
+            repeat_values = [repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == item)]['r'].values[0]+1 if not repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == item)].empty else 1 for item in top_items]
+
 
         # ranksからrep_idxに対応するアイテムだけを取得
         ranks_rep = np.array(ranks)[rep_idx]
@@ -488,7 +500,9 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             result['seq'].append(seq)
             result['ranks'].append(ranks)
             result['item_idx'].append(item_idx[:correct_len])
+            result['rep_gt'].append(rep_gt)
             result['top_items'].append(top_items)
+            result['top_items_rep'].append(repeat_values)
             result['R_PRECITION'].append(r_precition)
             result['NEXT_HR'].append(next_hr)
             result['RECALL_10'].append(recall_10)
@@ -504,7 +518,9 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             result['rep'].append(rep)
             result['ranks'].append(ranks)
             result['item_idx'].append(item_idx[:correct_len])
+            result['rep_gt'].append(rep_gt)
             result['top_items'].append(top_items)
+            result['top_items_rep'].append(repeat_values)
             result['R_PRECITION'].append(r_precition)
             result['NEXT_HR'].append(next_hr)
             result['RECALL_10'].append(recall_10)
