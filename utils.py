@@ -495,6 +495,7 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
 
         # resultに格納
         if mode == 'test' and model_name == 'SASRec':
+            seq = seq.tolist()
             result['ss'].append(ss)
             result['u'].append(u)
             result['seq'].append(seq)
@@ -512,6 +513,8 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             result['NDCG_10'].append(ndcg_10)
             result['NDCG_20'].append(ndcg_20)
         elif mode == 'test' and (model_name == 'SASRec_Repeat' or model_name=='SASRec_RepeatPlus' or model_name=='SASRec_Repeat_Out' or model_name=='LightSANs' or model_name=='LightSANs_Repeat'):
+            seq = seq.tolist()
+            rep = rep.tolist()
             result['ss'].append(ss)
             result['u'].append(u)
             result['seq'].append(seq)
