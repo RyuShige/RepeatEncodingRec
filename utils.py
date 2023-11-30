@@ -375,7 +375,10 @@ def evaluate(model, model_name, dataset, args, mode, repeat_data=None):
             # 新しい順序で item_idx を取得
             top_items = [item for item, rank in item_rank_pairs]
             top_items = list(OrderedDict.fromkeys(top_items))
-            top_items = top_items[:20]
+            if correct_len > 20:
+                top_items = top_items[:correct_len]
+            else:
+                top_items = top_items[:20]
 
         if args.repeat_data and mode=='test' and not args.search:
             repeat_values = [repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == item)]['r'].values[0]+1 if not repeat_data[(repeat_data['u'] == u) & (repeat_data['i'] == item)].empty else 1 for item in top_items]
