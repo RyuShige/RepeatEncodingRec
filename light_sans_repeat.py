@@ -153,10 +153,10 @@ class LightSANs_Repeat(torch.nn.Module):
         # )
 
         # item,rep+pos。vはitemのみ-ReSANs
-        repeat_position_emb = repeat_embedding + position_embedding
-        trm_output = self.trm_encoder(
-            item_emb, repeat_position_emb, output_all_encoded_layers=True
-        )
+        # repeat_position_emb = repeat_embedding + position_embedding
+        # trm_output = self.trm_encoder(
+        #     item_emb, repeat_position_emb, output_all_encoded_layers=True
+        # )
 
         # item+pos,rep+pos。vはitemのみ-ReSANs-abl_1
         # repeat_position_emb = repeat_embedding + position_embedding
@@ -169,6 +169,12 @@ class LightSANs_Repeat(torch.nn.Module):
         # trm_output = self.trm_encoder(
         #     item_emb, position_embedding, output_all_encoded_layers=True
         # )
+        
+        # item+rep, pos。vはitem+rep-ReSANs-abl_3
+        item_repeat_emb = item_emb + repeat_embedding
+        trm_output = self.trm_encoder(
+            item_repeat_emb, position_embedding, output_all_encoded_layers=True
+        )
 
 
         output = trm_output[-1]
