@@ -5,6 +5,7 @@ lightSANsのコードを参考にするために、recboleのSASRecの実装+BCE
 import numpy as np
 import torch
 from layer import LightRepeatTransformerEncoder
+from layer import RepeatTransformerEncoder
 
 class PointWiseFeedForward(torch.nn.Module):
     def __init__(self, hidden_units, dropout_rate):
@@ -54,7 +55,20 @@ class LightSANs_Repeat(torch.nn.Module):
         self.layer_norm_eps = 1e-12
         self.initializer_range = 0.02
         
-        self.trm_encoder = LightRepeatTransformerEncoder(
+        # self.trm_encoder = LightRepeatTransformerEncoder(
+        #     n_layers=args.num_blocks,
+        #     n_heads=args.num_heads,
+        #     k_interests=self.k_interests,
+        #     hidden_size=args.hidden_units,
+        #     seq_len=args.maxlen,
+        #     inner_size=self.inner_size,
+        #     hidden_dropout_prob=self.hidden_dropout_prob,
+        #     attn_dropout_prob=self.attn_dropout_prob,
+        #     hidden_act=self.hidden_act,
+        #     layer_norm_eps=self.layer_norm_eps,
+        # )
+
+        self.trm_encoder = RepeatTransformerEncoder(
             n_layers=args.num_blocks,
             n_heads=args.num_heads,
             k_interests=self.k_interests,
@@ -177,10 +191,15 @@ class LightSANs_Repeat(torch.nn.Module):
         # )
 
         # item+rep, pos+rep。vはitem+rep-ReSANs-abl_4
-        item_repeat_emb = item_emb + repeat_embedding
-        position_repeat_emb = position_embedding + repeat_embedding
+        # item_repeat_emb = item_emb + repeat_embedding
+        # position_repeat_emb = position_embedding + repeat_embedding
+        # trm_output = self.trm_encoder(
+        #     item_repeat_emb, position_repeat_emb, output_all_encoded_layers=True
+        # )
+
+        # item, rep, pos。vはitemのみ-ReSANs
         trm_output = self.trm_encoder(
-            item_repeat_emb, position_repeat_emb, output_all_encoded_layers=True
+            item_emb, position_embedding, repeat_embedding, output_all_encoded_layers=True
         )
 
 
