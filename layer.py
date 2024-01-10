@@ -663,8 +663,10 @@ class RepeatMultiHeadAttention(nn.Module):
         self.attn_scale_factor = 2
         self.pos_q_linear = nn.Linear(hidden_size, self.all_head_size)
         self.pos_k_linear = nn.Linear(hidden_size, self.all_head_size)
+        self.pos_v_linear = nn.Linear(hidden_size, self.all_head_size)
         self.rep_q_linear = nn.Linear(hidden_size, self.all_head_size)
         self.rep_k_linear = nn.Linear(hidden_size, self.all_head_size)
+        self.rep_v_linear = nn.Linear(hidden_size, self.all_head_size)
 
         self.pos_scaling = (
             float(self.attention_head_size * self.attn_scale_factor) ** -0.5
@@ -710,19 +712,22 @@ class RepeatMultiHeadAttention(nn.Module):
             self.transpose_for_scores(self.pos_q_linear(pos_emb))
         )
         pos_key_layer = self.transpose_for_scores(self.pos_k_linear(pos_emb))
+        pos_value_layer = self.transpose_for_scores(self.pos_v_linear(pos_emb))
 
         rep_emb = self.pos_ln(rep_emb)
         rep_query_layer = (
             self.transpose_for_scores(self.rep_q_linear(rep_emb))
         )
         rep_key_layer = self.transpose_for_scores(self.rep_k_linear(rep_emb))
+        rep_value_layer = self.transpose_for_scores(self.rep_v_linear(pos_emb))
 
         # concat,plus,itemintegration
         pos_rep_layer_q = pos_query_layer + rep_query_layer
         pos_rep_layer_k = pos_key_layer + rep_key_layer
+        pos_rep_layer_v = pos_value_layer + rep_value_layer
         query_layer += pos_rep_layer_q
         key_layer += pos_rep_layer_k
-        # value_layer += value_layer_pos
+        value_layer += pos_rep_layer_v
 
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
